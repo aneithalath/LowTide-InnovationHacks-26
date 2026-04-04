@@ -1,0 +1,151 @@
+{
+  "location": "Tempe, Arizona",
+  "targetSpeedMph": 45,
+  "routes": [
+    {
+      "id": "mill-university-broadway-loop",
+      "label": "Mill Ave / University / Broadway Loop",
+      "points": [
+        [-111.9466, 33.4336],
+        [-111.941, 33.4307],
+        [-111.9307, 33.4308],
+        [-111.9308, 33.4232],
+        [-111.939, 33.4231],
+        [-111.9467, 33.423],
+        [-111.9466, 33.4336]
+      ]
+    },
+    {
+      "id": "rural-mcclintock-apache-southern",
+      "label": "Rural / McClintock / Apache / Southern",
+      "points": [
+        [-111.9307, 33.422],
+        [-111.9222, 33.4219],
+        [-111.9223, 33.4139],
+        [-111.9308, 33.4138],
+        [-111.9307, 33.422]
+      ]
+    },
+    {
+      "id": "rio-salado-east-corridor",
+      "label": "Rio Salado East Corridor",
+      "points": [
+        [-111.9397, 33.4349],
+        [-111.9306, 33.4351],
+        [-111.922, 33.4352],
+        [-111.9177, 33.4314],
+        [-111.9224, 33.4278],
+        [-111.931, 33.428],
+        [-111.9397, 33.4349]
+      ]
+    },
+    {
+      "id": "priest-broadway-corridor",
+      "label": "Priest / Broadway Corridor",
+      "points": [
+        [-111.9636, 33.4312],
+        [-111.9554, 33.4311],
+        [-111.9555, 33.4218],
+        [-111.9636, 33.4218],
+        [-111.9636, 33.4312]
+      ]
+    },
+    {
+      "id": "south-tempe-guadalupe-warner",
+      "label": "South Tempe Guadalupe / Warner Loop",
+      "points": [
+        [-111.9638, 33.3934],
+        [-111.952, 33.3935],
+        [-111.9424, 33.3934],
+        [-111.9425, 33.3792],
+        [-111.9522, 33.3793],
+        [-111.9637, 33.3792],
+        [-111.9638, 33.3934]
+      ]
+    },
+    {
+      "id": "southern-baseline-east-loop",
+      "label": "Southern / Baseline East Loop",
+      "points": [
+        [-111.94, 33.4084],
+        [-111.9308, 33.4083],
+        [-111.9221, 33.4083],
+        [-111.922, 33.3997],
+        [-111.9307, 33.3996],
+        [-111.94, 33.3997],
+        [-111.94, 33.4084]
+      ]
+    },
+    {
+      "id": "asu-east-apache-loop",
+      "label": "ASU East / Apache Loop",
+      "points": [
+        [-111.9393, 33.4275],
+        [-111.9324, 33.4275],
+        [-111.9282, 33.424],
+        [-111.9282, 33.4188],
+        [-111.9325, 33.4188],
+        [-111.9393, 33.421],
+        [-111.9393, 33.4275]
+      ]
+    },
+    {
+      "id": "north-tempe-bridge-loop",
+      "label": "North Tempe Bridge Loop",
+      "points": [
+        [-111.938, 33.4388],
+        [-111.9302, 33.4389],
+        [-111.9239, 33.4387],
+        [-111.9238, 33.4328],
+        [-111.9301, 33.4327],
+        [-111.938, 33.4329],
+        [-111.938, 33.4388]
+      ]
+    }
+  ],
+  "fleet": {
+    "police": [
+      "P-104",
+      "P-212",
+      "P-301",
+      "P-302",
+      "P-303",
+      "P-304",
+      "P-305",
+      "P-306",
+      "P-307",
+      "P-308",
+      "P-309",
+      "P-310",
+      "P-311",
+      "P-312",
+      "P-313",
+      "P-314",
+      "P-315",
+      "P-316",
+      "P-317",
+      "P-318"
+    ],
+    "ambulance": [
+      "TEMPE-AMB-01",
+      "TEMPE-AMB-02",
+      "TEMPE-AMB-03",
+      "TEMPE-AMB-04",
+      "TEMPE-AMB-05",
+      "TEMPE-AMB-06"
+    ],
+    "firetruck": [
+      "TEMPE-FIRE-01",
+      "TEMPE-FIRE-02",
+      "TEMPE-FIRE-03",
+      "TEMPE-FIRE-04",
+      "TEMPE-FIRE-05",
+      "TEMPE-FIRE-06",
+      "TEMPE-FIRE-07",
+      "TEMPE-FIRE-08",
+      "TEMPE-FIRE-09",
+      "TEMPE-FIRE-10",
+      "TEMPE-FIRE-11"
+    ]
+  }
+}
