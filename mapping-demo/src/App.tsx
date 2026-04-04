@@ -34,6 +34,52 @@ type IncidentApiResponse = {
   results?: IncidentResult[]
 }
 
+type PredictionApiResponse = {
+  prediction_id: string
+  timestamp: string
+  risk_assessment: {
+    level: string
+    coordinates: {
+      latitude: number
+      longitude: number
+    }
+    location_name: string
+    risk_factors: string[]
+    explanation: string
+  }
+  mitigation_strategy: {
+    police_dispatch: {
+      action: string
+      assigned_units: {
+        vehicle_id: string
+        status: string
+      }[]
+    }
+    medical_standby: {
+      unit_id: string
+      instruction: string
+      message: string
+      standby_location: {
+        latitude: number
+        longitude: number
+      }
+    }
+    traffic_control: {
+      're-routing': string
+    }
+  }
+}
+
+type ThreatActionItem = {
+  id: string
+  label: string
+  detail: string
+  kind: 'dispatch' | 'medical' | 'traffic'
+  dispatchVehicleId?: string
+}
+
+type ThreatActionStatus = 'idle' | 'active' | 'complete' | 'error'
+
 type OpenSkyApiResponse = {
   states?: unknown[]
 }
@@ -201,6 +247,34 @@ type EmergencyVehicleRuntime = {
   assignment: string
   district: string
   crew: string
+  dispatchRoute: EmergencyVehicleRoute | null
+  dispatchDistanceMeters: number
+  dispatchTargetLabel: string
+  dispatchActionId: string
+  isStationedAtDispatchTarget: boolean
+  overrideLocation?: { latitude: number, longitude: number, headingDegrees: number }
+  overrideStatus?: 'patrolling' | 'responding' | 'staged'
+}
+
+type EmergencyFleetUnitSeed = {
+  id: string
+  vehicleType: EmergencyVehicleType
+}
+
+type EmergencyFleetSnapshot = {
+  targetSpeedMph: number
+  routes: EmergencyVehicleRouteBlueprint[]
+  units: EmergencyFleetUnitSeed[]
+}
+
+type RoadWaypoint = {
+  latitude: number
+  longitude: number
+}
+
+type RoadRouteApiResponse = {
+  coordinates: [number, number][]
+  distance_meters: number
 }
 
 type EmergencyVehicleUnit = {
@@ -222,6 +296,7 @@ type EmergencyVehicleUnit = {
   fuelLevelPercent: number
   lastUpdate: number
   telemetry: string[]
+  dispatchRoutePoints?: [number, number][]
 }
 
 type SelectedUnit =
@@ -337,6 +412,11 @@ const CONGREGATION_CACHE_API = '/api/congregation-cache'
 const CONGREGATION_CACHE_FILE = '/congregation-cache.json'
 const CONGREGATION_CACHE_STORAGE_KEY = 'mapping-demo:congregation-cache:v1'
 const CCTV_SOURCE_FILE = '/cams.json'
+const EMERGENCY_FLEET_SOURCE_FILE = '/emergency-fleet.json'
+const EMERGENCY_ROUTE_DISPATCH_API =
+  import.meta.env.VITE_EMERGENCY_ROUTE_DISPATCH_API ?? 'http://127.0.0.1:8000/route/dispatch'
+const EMERGENCY_ROUTE_WAYPOINTS_API =
+  import.meta.env.VITE_EMERGENCY_ROUTE_WAYPOINTS_API ?? 'http://127.0.0.1:8000/route/waypoints'
 const AIRCRAFT_CACHE_API = '/api/aircraft-cache'
 const AIRCRAFT_CACHE_FILE = '/aircraft-cache.json'
 const AIRCRAFT_CACHE_STORAGE_KEY = 'mapping-demo:aircraft-cache:v1'
@@ -345,15 +425,66 @@ const AIRCRAFT_CACHE_MIN_VIEWPORT_OVERLAP = 0.82
 const CONGREGATION_CACHE_TILE_SIZE = 0.025
 const CONGREGATION_CACHE_MAX_TILE_SCAN = 4_000
 const EMERGENCY_SIMULATION_UPDATE_MS = 1_000
+const EMERGENCY_PATROL_SPEED_MPH = 45
 const KNOTS_PER_METER_PER_SECOND = 1.943844
 const FEET_PER_METER = 3.28084
 const METERS_PER_MILE = 1_609.344
 const METERS_PER_DEGREE_LATITUDE = 111_320
+const RISK_PREDICTION_API =
+  import.meta.env.VITE_RISK_PREDICTION_API ?? 'http://127.0.0.1:8000/prediction'
 const EMPTY_ROTORCRAFT_FEED_STATS: RotorcraftFeedStats = {
   totalStates: 0,
   statesWithCategory: 0,
   statesWithCoordinates: 0,
   plottedStates: 0,
+}
+const DEFAULT_RISK_PREDICTION: PredictionApiResponse = {
+  prediction_id: 'risk-analysis-2026-04-04-8832',
+  timestamp: '2026-04-04T13:25:00Z',
+  risk_assessment: {
+    level: 'High',
+    coordinates: {
+      latitude: 33.4255,
+      longitude: -111.94,
+    },
+    location_name: 'Mill Avenue & University Drive',
+    risk_factors: [
+      'Heavy congestion following a stadium event',
+      'Historical data indicating high pedestrian-vehicle conflict at this hour',
+      'Recent social media reports of an unsanctioned street gathering nearby',
+    ],
+    explanation:
+      "A high-risk event is predicted due to the convergence of 'after-stadium' foot traffic and peak-hour vehicle congestion. The risk is compounded by recent citizen incident reports of aggressive driving in the immediate vicinity and a scheduled large-scale street festival nearby that has exceeded its planned capacity, creating a high probability of crowd crush or pedestrian-involved collisions.",
+  },
+  mitigation_strategy: {
+    police_dispatch: {
+      action: 'Deploy for traffic calming and crowd monitoring',
+      assigned_units: [
+        {
+          vehicle_id: 'P-104',
+          status: 'En route',
+        },
+        {
+          vehicle_id: 'P-212',
+          status: 'En route',
+        },
+      ],
+    },
+    medical_standby: {
+      unit_id: 'AMB-09',
+      instruction: 'Pre-notification',
+      message:
+        'Potential high-density incident at Mill & University. No immediate dispatch required; remain on standby at Station 4 for rapid response if situation escalates.',
+      standby_location: {
+        latitude: 33.422,
+        longitude: -111.935,
+      },
+    },
+    traffic_control: {
+      're-routing':
+        'Automated signal timing adjustment implemented for Northbound traffic to reduce pedestrian dwell time.',
+    },
+  },
 }
 const EMPTY_RISK_HEATMAP_FEATURE_COLLECTION: RiskHeatmapFeatureCollection = {
   type: 'FeatureCollection',
@@ -402,13 +533,13 @@ const CHRISTIAN_DENOMINATION_HINTS = [
 ]
 
 const RELIGION_ICON_BY_GROUP: Record<ReligionGroup, string> = {
-  christian: '✝',
-  muslim: '☪',
-  jewish: '✡',
-  buddhist: '☸',
-  hindu: 'ॐ',
-  sikh: '☬',
-  other: '✦',
+  christian: '?',
+  muslim: '?',
+  jewish: '?',
+  buddhist: '?',
+  hindu: '?',
+  sikh: '?',
+  other: '?',
 }
 
 const RELIGION_LABEL_BY_GROUP: Record<ReligionGroup, string> = {
@@ -448,11 +579,11 @@ const CONGREGATION_SUBLAYER_LABELS: Record<CongregationSubLayerKey, string> = {
 }
 
 const CONGREGATION_ICON_BY_CATEGORY: Record<CongregationSubLayerKey, string> = {
-  worship: '✦',
-  school: '🎓',
-  stadium: '🏟',
-  arena: '🎪',
-  hospital: '🏥',
+  worship: '?',
+  school: '??',
+  stadium: '??',
+  arena: '??',
+  hospital: '??',
 }
 
 const EMERGENCY_VEHICLE_LABEL_BY_TYPE: Record<EmergencyVehicleType, string> = {
@@ -462,9 +593,9 @@ const EMERGENCY_VEHICLE_LABEL_BY_TYPE: Record<EmergencyVehicleType, string> = {
 }
 
 const EMERGENCY_VEHICLE_ICON_BY_TYPE: Record<EmergencyVehicleType, string> = {
-  police: '🚓',
-  ambulance: '🚑',
-  firetruck: '🚒',
+  police: '??',
+  ambulance: '??',
+  firetruck: '??',
 }
 
 const EMERGENCY_STATUS_LABEL_BY_CODE: Record<EmergencyVehicleStatus, string> = {
@@ -473,16 +604,12 @@ const EMERGENCY_STATUS_LABEL_BY_CODE: Record<EmergencyVehicleStatus, string> = {
   staged: 'Staged',
 }
 
-const EMERGENCY_UNIT_COUNTS: Record<EmergencyVehicleType, number> = {
-  police: 6,
-  ambulance: 4,
-  firetruck: 3,
-}
+const EMERGENCY_VEHICLE_TYPES: EmergencyVehicleType[] = ['police', 'ambulance', 'firetruck']
 
-const EMERGENCY_SPEED_RANGE_MPH_BY_TYPE: Record<EmergencyVehicleType, [number, number]> = {
-  police: [28, 44],
-  ambulance: [24, 39],
-  firetruck: [20, 33],
+const EMERGENCY_UNIT_COUNTS: Record<EmergencyVehicleType, number> = {
+  police: 20,
+  ambulance: 6,
+  firetruck: 11,
 }
 
 const EMERGENCY_ASSIGNMENTS_BY_TYPE: Record<EmergencyVehicleType, string[]> = {
@@ -662,6 +789,22 @@ const levelLabel = (level: number) => {
   return 'LEVEL 1+'
 }
 
+const threatActionStatusLabel = (status: ThreatActionStatus) => {
+  if (status === 'active') {
+    return 'Active'
+  }
+
+  if (status === 'complete') {
+    return 'Complete'
+  }
+
+  if (status === 'error') {
+    return 'Error'
+  }
+
+  return 'Pending'
+}
+
 const formatUpdateAge = (timestamp: number) => {
   const elapsedMs = Date.now() - timestamp
 
@@ -776,13 +919,13 @@ const AIRCRAFT_CATEGORY_LABELS: Record<number, string> = {
 }
 
 const AIRCRAFT_ICON_BY_THEME: Record<AircraftPinTheme, string> = {
-  rotorcraft: '🚁',
-  heavy: '✈',
-  light: '🛩',
-  glider: '🪂',
-  uav: '🛸',
-  surface: '🚐',
-  unknown: '✈',
+  rotorcraft: '??',
+  heavy: '?',
+  light: '??',
+  glider: '??',
+  uav: '??',
+  surface: '??',
+  unknown: '?',
 }
 
 const AIRCRAFT_PIN_THEMES: AircraftPinTheme[] = [
@@ -852,7 +995,7 @@ const resolveAircraftPinTheme = (category: number | null): AircraftPinTheme => {
 }
 
 const formatAircraftHeading = (trueTrack: number | null) =>
-  trueTrack === null ? 'TRK N/A' : `TRK ${Math.round(trueTrack)}°`
+  trueTrack === null ? 'TRK N/A' : `TRK ${Math.round(trueTrack)}�`
 
 const formatAircraftSpeed = (speedKnots: number | null) =>
   speedKnots === null ? 'GS N/A' : `GS ${Math.round(speedKnots)} KT`
@@ -1508,11 +1651,6 @@ const normalizeViewportBounds = (bounds: ViewportBounds) => {
 
 const toRadians = (degrees: number) => (degrees * Math.PI) / 180
 
-const pseudoRandomFromSeed = (seed: number) => {
-  const normalized = Math.sin(seed * 9_999.917) * 43_758.5453123
-  return normalized - Math.floor(normalized)
-}
-
 const metersPerDegreeLongitude = (latitude: number) =>
   Math.max(1, Math.cos(toRadians(latitude)) * METERS_PER_DEGREE_LATITUDE)
 
@@ -1698,75 +1836,95 @@ const estimateFallbackTrafficCongestion = (
       levelZeroIncidentSignal * 0.15,
   )
 
-const buildEmergencyRoutes = (center: [number, number]): EmergencyVehicleRoute[] => {
-  const routes = EMERGENCY_ROUTE_BLUEPRINTS.map((blueprint): EmergencyVehicleRoute | null => {
-    const absolutePoints = blueprint.points.map(
-      ([longitudeOffset, latitudeOffset]) =>
-        [
-          Number((center[0] + longitudeOffset).toFixed(7)),
-          Number((center[1] + latitudeOffset).toFixed(7)),
-        ] as [number, number],
-    )
+const buildEmergencyRouteFromPoints = (
+  routeId: string,
+  routeLabel: string,
+  points: [number, number][],
+  closeLoop: boolean,
+): EmergencyVehicleRoute | null => {
+  const routePoints = points.map(([longitude, latitude]) => [
+    Number(longitude.toFixed(7)),
+    Number(latitude.toFixed(7)),
+  ]) as [number, number][]
 
-    if (absolutePoints.length < 2) {
-      return null
+  if (closeLoop && routePoints.length >= 2) {
+    const firstPoint = routePoints[0]
+    const lastPoint = routePoints[routePoints.length - 1]
+
+    if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
+      routePoints.push([firstPoint[0], firstPoint[1]])
     }
+  }
 
-    const segmentLengths: number[] = []
-    let totalLength = 0
+  if (routePoints.length < 2) {
+    return null
+  }
 
-    for (let segmentIndex = 0; segmentIndex < absolutePoints.length - 1; segmentIndex += 1) {
-      const start = absolutePoints[segmentIndex]
-      const end = absolutePoints[segmentIndex + 1]
-      const segmentLength = calculateGroundDistanceMeters(start, end)
+  const segmentLengths: number[] = []
+  let totalLength = 0
 
-      segmentLengths.push(segmentLength)
-      totalLength += segmentLength
-    }
+  for (let segmentIndex = 0; segmentIndex < routePoints.length - 1; segmentIndex += 1) {
+    const start = routePoints[segmentIndex]
+    const end = routePoints[segmentIndex + 1]
+    const segmentLength = calculateGroundDistanceMeters(start, end)
 
-    if (totalLength <= 0) {
-      return null
-    }
+    segmentLengths.push(segmentLength)
+    totalLength += segmentLength
+  }
 
-    return {
-      id: blueprint.id,
-      label: blueprint.label,
-      points: absolutePoints,
-      segmentLengths,
-      totalLength,
-    }
+  if (totalLength <= 0) {
+    return null
+  }
+
+  return {
+    id: routeId,
+    label: routeLabel,
+    points: routePoints,
+    segmentLengths,
+    totalLength,
+  }
+}
+
+const buildEmergencyRoutes = (
+  center: [number, number],
+  routeBlueprints: EmergencyVehicleRouteBlueprint[] = EMERGENCY_ROUTE_BLUEPRINTS,
+  pointsAreOffsets = true,
+): EmergencyVehicleRoute[] => {
+  const routes = routeBlueprints.map((blueprint): EmergencyVehicleRoute | null => {
+    const absolutePoints = blueprint.points.map(([longitudeInput, latitudeInput]) => {
+      const longitude = pointsAreOffsets ? center[0] + longitudeInput : longitudeInput
+      const latitude = pointsAreOffsets ? center[1] + latitudeInput : latitudeInput
+
+      return [longitude, latitude] as [number, number]
+    })
+
+    return buildEmergencyRouteFromPoints(blueprint.id, blueprint.label, absolutePoints, true)
   }).filter((route): route is EmergencyVehicleRoute => route !== null)
 
   if (routes.length) {
     return routes
   }
 
-  const fallbackLoop: EmergencyVehicleRoute = {
-    id: 'fallback-loop',
-    label: 'Fallback Patrol Loop',
-    points: [
+  const fallbackLoop = buildEmergencyRouteFromPoints(
+    'fallback-loop',
+    'Fallback Patrol Loop',
+    [
       [center[0] - 0.008, center[1] + 0.008],
       [center[0] + 0.008, center[1] + 0.008],
       [center[0] + 0.008, center[1] - 0.008],
       [center[0] - 0.008, center[1] - 0.008],
-      [center[0] - 0.008, center[1] + 0.008],
     ],
-    segmentLengths: [],
-    totalLength: 0,
-  }
+    true,
+  )
 
-  for (let segmentIndex = 0; segmentIndex < fallbackLoop.points.length - 1; segmentIndex += 1) {
-    const start = fallbackLoop.points[segmentIndex]
-    const end = fallbackLoop.points[segmentIndex + 1]
-    const segmentLength = calculateGroundDistanceMeters(start, end)
-    fallbackLoop.segmentLengths.push(segmentLength)
-    fallbackLoop.totalLength += segmentLength
-  }
-
-  return [fallbackLoop]
+  return fallbackLoop ? [fallbackLoop] : []
 }
 
-const sampleEmergencyRoutePosition = (route: EmergencyVehicleRoute, distanceMeters: number) => {
+const sampleEmergencyRoutePosition = (
+  route: EmergencyVehicleRoute,
+  distanceMeters: number,
+  isLoopRoute: boolean,
+) => {
   if (!route.points.length) {
     return {
       longitude: DEFAULT_CENTER[0],
@@ -1775,8 +1933,10 @@ const sampleEmergencyRoutePosition = (route: EmergencyVehicleRoute, distanceMete
     }
   }
 
-  const normalizedDistance = normalizeLoopedDistance(distanceMeters, route.totalLength)
-  let remainingDistance = normalizedDistance
+  const boundedDistance = isLoopRoute
+    ? normalizeLoopedDistance(distanceMeters, route.totalLength)
+    : Math.min(Math.max(0, distanceMeters), route.totalLength)
+  let remainingDistance = boundedDistance
 
   for (let segmentIndex = 0; segmentIndex < route.segmentLengths.length; segmentIndex += 1) {
     const segmentLength = route.segmentLengths[segmentIndex]
@@ -1810,15 +1970,57 @@ const sampleEmergencyRoutePosition = (route: EmergencyVehicleRoute, distanceMete
   }
 }
 
-const resolveEmergencyStatusFromPulse = (pulse: number): EmergencyVehicleStatus => {
-  if (pulse > 0.45) {
-    return 'responding'
+const resolveEmergencyRuntimeRouteContext = (
+  runtime: EmergencyVehicleRuntime,
+  routes: EmergencyVehicleRoute[],
+) => {
+  if (runtime.dispatchRoute) {
+    return {
+      route: runtime.dispatchRoute,
+      distanceMeters: runtime.dispatchDistanceMeters,
+      isLoopRoute: false,
+    }
   }
 
-  if (pulse < -0.45) {
-    return 'staged'
+  const patrolRoute = routes[runtime.routeIndex] ?? routes[0]
+
+  if (!patrolRoute) {
+    return null
   }
 
+  return {
+    route: patrolRoute,
+    distanceMeters: runtime.distanceAlongRouteMeters,
+    isLoopRoute: true,
+  }
+}
+
+const getEmergencyRuntimeCoordinates = (
+  runtime: EmergencyVehicleRuntime,
+  routes: EmergencyVehicleRoute[],
+) => {
+  const routeContext = resolveEmergencyRuntimeRouteContext(runtime, routes)
+
+  if (!routeContext) {
+    return {
+      longitude: DEFAULT_CENTER[0],
+      latitude: DEFAULT_CENTER[1],
+    }
+  }
+
+  const sampledPosition = sampleEmergencyRoutePosition(
+    routeContext.route,
+    routeContext.distanceMeters,
+    routeContext.isLoopRoute,
+  )
+
+  return {
+    longitude: sampledPosition.longitude,
+    latitude: sampledPosition.latitude,
+  }
+}
+
+const resolveEmergencyStatusFromPulse = (_pulse: number): EmergencyVehicleStatus => {
   return 'patrolling'
 }
 
@@ -1838,60 +2040,56 @@ const buildEmergencyTelemetry = (
 
   return [
     `${vehicleLabel} ${statusLabel} on ${routeLabel}. ${assignment}.`,
-    `Position lock stable. Speed ${Math.round(speedMph)} MPH, heading ${Math.round(headingDegrees)}°.`,
+    `Position lock stable. Speed ${Math.round(speedMph)} MPH, heading ${Math.round(headingDegrees)}�.`,
     `Dispatch queue synchronized. Next status checkpoint in ${etaMinutes} min.`,
   ]
 }
 
-const createEmergencyVehicleRuntimes = (routes: EmergencyVehicleRoute[]): EmergencyVehicleRuntime[] => {
-  if (!routes.length) {
+const createEmergencyVehicleRuntimes = (
+  routes: EmergencyVehicleRoute[],
+  fleetSnapshot: EmergencyFleetSnapshot,
+): EmergencyVehicleRuntime[] => {
+  if (!routes.length || !fleetSnapshot.units.length) {
     return []
   }
 
   const runtimes: EmergencyVehicleRuntime[] = []
-  const vehicleTypes: EmergencyVehicleType[] = ['police', 'ambulance', 'firetruck']
-  const typeCounters: Record<EmergencyVehicleType, number> = {
-    police: 0,
-    ambulance: 0,
-    firetruck: 0,
-  }
-  let simulationIndex = 0
+  const speedMetersPerSecond = fleetSnapshot.targetSpeedMph / 2.23693629
+  const unitsPerRoute = Math.max(1, Math.ceil(fleetSnapshot.units.length / routes.length))
 
-  vehicleTypes.forEach((vehicleType) => {
-    const typeCount = EMERGENCY_UNIT_COUNTS[vehicleType]
-    const [minimumSpeedMph, maximumSpeedMph] = EMERGENCY_SPEED_RANGE_MPH_BY_TYPE[vehicleType]
+  fleetSnapshot.units.forEach((fleetUnit, unitIndex) => {
+    const routeIndex = unitIndex % routes.length
+    const route = routes[routeIndex]
+    const routeSlot = Math.floor(unitIndex / routes.length)
+    const startDistance = route.totalLength * ((routeSlot + 1) / (unitsPerRoute + 1))
+    const assignmentOptions = EMERGENCY_ASSIGNMENTS_BY_TYPE[fleetUnit.vehicleType]
+    const assignment = assignmentOptions[unitIndex % assignmentOptions.length]
+    const district = EMERGENCY_DISTRICT_LABELS[unitIndex % EMERGENCY_DISTRICT_LABELS.length]
+    const crew = EMERGENCY_CREW_CODES[unitIndex % EMERGENCY_CREW_CODES.length]
+    const normalizedUnitId = fleetUnit.id
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
 
-    for (let unitIndex = 0; unitIndex < typeCount; unitIndex += 1) {
-      typeCounters[vehicleType] += 1
-      simulationIndex += 1
-
-      const unitSeed = simulationIndex * 17.37
-      const speedSeed = pseudoRandomFromSeed(unitSeed)
-      const speedMph = minimumSpeedMph + (maximumSpeedMph - minimumSpeedMph) * speedSeed
-      const routeIndex = simulationIndex % routes.length
-      const route = routes[routeIndex]
-      const startDistance = route.totalLength * pseudoRandomFromSeed(unitSeed + 0.67)
-      const assignmentOptions = EMERGENCY_ASSIGNMENTS_BY_TYPE[vehicleType]
-      const assignment = assignmentOptions[simulationIndex % assignmentOptions.length]
-      const district = EMERGENCY_DISTRICT_LABELS[simulationIndex % EMERGENCY_DISTRICT_LABELS.length]
-      const crew = EMERGENCY_CREW_CODES[simulationIndex % EMERGENCY_CREW_CODES.length]
-      const unitPrefix = vehicleType === 'police' ? 'PD' : vehicleType === 'ambulance' ? 'EMS' : 'FIRE'
-
-      runtimes.push({
-        key: `emergency-${vehicleType}-${typeCounters[vehicleType]}`,
-        unitCode: `${unitPrefix}-${typeCounters[vehicleType].toString().padStart(3, '0')}`,
-        vehicleType,
-        routeIndex,
-        distanceAlongRouteMeters: startDistance,
-        baseSpeedMetersPerSecond: speedMph / 2.23693629,
-        speedPhaseSeed: pseudoRandomFromSeed(unitSeed + 1.31) * Math.PI * 2,
-        statusPhaseSeed: pseudoRandomFromSeed(unitSeed + 2.63) * Math.PI * 2,
-        fuelPhaseSeed: pseudoRandomFromSeed(unitSeed + 3.79) * Math.PI * 2,
-        assignment,
-        district,
-        crew,
-      })
-    }
+    runtimes.push({
+      key: `emergency-${normalizedUnitId || `${fleetUnit.vehicleType}-${unitIndex + 1}`}`,
+      unitCode: fleetUnit.id,
+      vehicleType: fleetUnit.vehicleType,
+      routeIndex,
+      distanceAlongRouteMeters: startDistance,
+      baseSpeedMetersPerSecond: speedMetersPerSecond,
+      speedPhaseSeed: (unitIndex + 1) * 0.71,
+      statusPhaseSeed: (unitIndex + 1) * 0.53,
+      fuelPhaseSeed: (unitIndex + 1) * 0.37,
+      assignment,
+      district,
+      crew,
+      dispatchRoute: null,
+      dispatchDistanceMeters: 0,
+      dispatchTargetLabel: '',
+      dispatchActionId: '',
+      isStationedAtDispatchTarget: false,
+    })
   })
 
   return runtimes
@@ -1899,23 +2097,57 @@ const createEmergencyVehicleRuntimes = (routes: EmergencyVehicleRoute[]): Emerge
 
 const buildEmergencyVehicleSnapshot = (
   runtime: EmergencyVehicleRuntime,
-  route: EmergencyVehicleRoute,
+  routes: EmergencyVehicleRoute[],
   timestamp: number,
 ): EmergencyVehicleUnit => {
-  const speedPulse = (Math.sin(timestamp / 7_600 + runtime.speedPhaseSeed) + 1) / 2
+  const routeContext = resolveEmergencyRuntimeRouteContext(runtime, routes)
   const statusPulse = Math.sin(timestamp / 10_400 + runtime.statusPhaseSeed)
-  const status = resolveEmergencyStatusFromPulse(statusPulse)
-  const speedMetersPerSecond = runtime.baseSpeedMetersPerSecond * (0.72 + speedPulse * 0.42)
-  const sampledPosition = sampleEmergencyRoutePosition(route, runtime.distanceAlongRouteMeters)
+  const sampledPosition = routeContext
+    ? sampleEmergencyRoutePosition(
+        routeContext.route,
+        routeContext.distanceMeters,
+        routeContext.isLoopRoute,
+      )
+    : {
+        longitude: DEFAULT_CENTER[0],
+        latitude: DEFAULT_CENTER[1],
+        headingDegrees: 0,
+      }
+  const isDispatchRouteActive = runtime.dispatchRoute !== null
+  const originalStatus = isDispatchRouteActive
+    ? runtime.isStationedAtDispatchTarget
+      ? 'staged'
+      : 'responding'
+    : resolveEmergencyStatusFromPulse(statusPulse)
+  const status = runtime.overrideStatus ?? originalStatus
+  
+  const finalPosition = runtime.overrideLocation 
+    ? { longitude: runtime.overrideLocation.longitude, latitude: runtime.overrideLocation.latitude, headingDegrees: runtime.overrideLocation.headingDegrees }
+    : sampledPosition
+    
+  const speedMetersPerSecond =
+    (isDispatchRouteActive && runtime.isStationedAtDispatchTarget) || status === 'staged'
+      ? 0
+      : status === 'responding'
+      ? (60 * 1609.344) / 3600
+      : runtime.baseSpeedMetersPerSecond
   const speedMph = metersPerSecondToMph(speedMetersPerSecond)
+  const etaPulse = (Math.sin(timestamp / 12_400 + runtime.speedPhaseSeed) + 1) / 2
   const etaMinutes =
-    status === 'responding'
-      ? Math.max(2, Math.round(2 + (1 - speedPulse) * 6))
+    isDispatchRouteActive && runtime.isStationedAtDispatchTarget
+      ? 0
+      : status === 'responding'
+      ? Math.max(2, Math.round(2 + etaPulse * 3))
       : status === 'staged'
-        ? Math.max(7, Math.round(7 + speedPulse * 7))
-        : Math.max(4, Math.round(4 + speedPulse * 9))
+        ? Math.max(7, Math.round(7 + etaPulse * 4))
+        : Math.max(4, Math.round(4 + etaPulse * 5))
   const fuelPulse = (Math.sin(timestamp / 21_000 + runtime.fuelPhaseSeed) + 1) / 2
   const fuelLevelPercent = Math.round(35 + fuelPulse * 60)
+  const routeLabel = runtime.dispatchRoute
+    ? runtime.isStationedAtDispatchTarget
+      ? `Stationed � ${runtime.dispatchTargetLabel}`
+      : `Dispatch � ${runtime.dispatchTargetLabel}`
+    : (routeContext?.route.label ?? 'Patrol Route')
 
   return {
     key: runtime.key,
@@ -1924,24 +2156,25 @@ const buildEmergencyVehicleSnapshot = (
     vehicleLabel: EMERGENCY_VEHICLE_LABEL_BY_TYPE[runtime.vehicleType],
     icon: EMERGENCY_VEHICLE_ICON_BY_TYPE[runtime.vehicleType],
     status,
-    latitude: sampledPosition.latitude,
-    longitude: sampledPosition.longitude,
-    headingDegrees: sampledPosition.headingDegrees,
+    latitude: finalPosition.latitude,
+    longitude: finalPosition.longitude,
+    headingDegrees: finalPosition.headingDegrees,
     speedMph,
     assignment: runtime.assignment,
     district: runtime.district,
-    routeLabel: route.label,
+    routeLabel,
     crew: runtime.crew,
     etaMinutes,
     fuelLevelPercent,
     lastUpdate: timestamp,
+    dispatchRoutePoints: isDispatchRouteActive && status === 'responding' ? runtime.dispatchRoute?.points : undefined,
     telemetry: buildEmergencyTelemetry(
       runtime.vehicleType,
       status,
-      route.label,
+      routeLabel,
       runtime.assignment,
       speedMph,
-      sampledPosition.headingDegrees,
+      finalPosition.headingDegrees,
       etaMinutes,
     ),
   }
@@ -1958,17 +2191,34 @@ const advanceEmergencyVehicleSimulation = (
   }
 
   return runtimes.map((runtime) => {
-    const route = routes[runtime.routeIndex]
-    const movementPulse = (Math.sin(timestamp / 8_800 + runtime.speedPhaseSeed) + 1) / 2
-    const movementMeters =
-      runtime.baseSpeedMetersPerSecond * (0.72 + movementPulse * 0.42) * elapsedSeconds
+    const isResponding = runtime.dispatchRoute && !runtime.isStationedAtDispatchTarget
+    const currentSpeed = isResponding ? (60 * 1609.344) / 3600 : runtime.baseSpeedMetersPerSecond
+    const movementMeters = currentSpeed * elapsedSeconds
 
-    runtime.distanceAlongRouteMeters = normalizeLoopedDistance(
-      runtime.distanceAlongRouteMeters + movementMeters,
-      route.totalLength,
-    )
+    if (runtime.dispatchRoute) {
+      if (!runtime.isStationedAtDispatchTarget) {
+        runtime.dispatchDistanceMeters = Math.min(
+          runtime.dispatchDistanceMeters + movementMeters,
+          runtime.dispatchRoute.totalLength,
+        )
 
-    return buildEmergencyVehicleSnapshot(runtime, route, timestamp)
+        if (runtime.dispatchDistanceMeters >= runtime.dispatchRoute.totalLength - 2) {
+          runtime.dispatchDistanceMeters = runtime.dispatchRoute.totalLength
+          runtime.isStationedAtDispatchTarget = true
+        }
+      }
+    } else {
+      const patrolRoute = routes[runtime.routeIndex] ?? routes[0]
+
+      if (patrolRoute) {
+        runtime.distanceAlongRouteMeters = normalizeLoopedDistance(
+          runtime.distanceAlongRouteMeters + movementMeters,
+          patrolRoute.totalLength,
+        )
+      }
+    }
+
+    return buildEmergencyVehicleSnapshot(runtime, routes, timestamp)
   })
 }
 
@@ -1991,6 +2241,123 @@ const dedupeCongregationPlaces = (places: CongregationPlace[]) => {
 }
 
 const toTrimmedString = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
+
+const parseEmergencyFleetPayload = (payload: unknown): EmergencyFleetSnapshot | null => {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const source = payload as Record<string, unknown>
+  const routePayload = Array.isArray(source.routes) ? source.routes : []
+  const routes: EmergencyVehicleRouteBlueprint[] = []
+
+  routePayload.forEach((routeEntry, routeIndex) => {
+    if (!routeEntry || typeof routeEntry !== 'object') {
+      return
+    }
+
+    const routeSource = routeEntry as Record<string, unknown>
+    const routePointsPayload = Array.isArray(routeSource.points) ? routeSource.points : []
+    const routePoints: [number, number][] = []
+
+    routePointsPayload.forEach((pointCandidate) => {
+      if (!Array.isArray(pointCandidate) || pointCandidate.length < 2) {
+        return
+      }
+
+      const longitude = toFiniteNumber(pointCandidate[0])
+      const latitude = toFiniteNumber(pointCandidate[1])
+
+      if (longitude === null || latitude === null) {
+        return
+      }
+
+      routePoints.push([Number(longitude.toFixed(7)), Number(latitude.toFixed(7))])
+    })
+
+    if (routePoints.length < 2) {
+      return
+    }
+
+    const firstPoint = routePoints[0]
+    const lastPoint = routePoints[routePoints.length - 1]
+
+    if (firstPoint[0] !== lastPoint[0] || firstPoint[1] !== lastPoint[1]) {
+      routePoints.push([firstPoint[0], firstPoint[1]])
+    }
+
+    routes.push({
+      id: toTrimmedString(routeSource.id) || `tempe-route-${routeIndex + 1}`,
+      label: toTrimmedString(routeSource.label) || `Tempe Route ${routeIndex + 1}`,
+      points: routePoints,
+    })
+  })
+
+  if (!routes.length) {
+    return null
+  }
+
+  const fleetSource = source.fleet && typeof source.fleet === 'object'
+    ? (source.fleet as Record<string, unknown>)
+    : null
+
+  if (!fleetSource) {
+    return null
+  }
+
+  const units: EmergencyFleetUnitSeed[] = []
+
+  for (const vehicleType of EMERGENCY_VEHICLE_TYPES) {
+    const typeIds = Array.isArray(fleetSource[vehicleType]) ? fleetSource[vehicleType] : []
+
+    if (!Array.isArray(typeIds)) {
+      return null
+    }
+
+    const dedupedIds: string[] = []
+    const seenIds = new Set<string>()
+
+    typeIds.forEach((idCandidate) => {
+      const unitId = toTrimmedString(idCandidate)
+
+      if (!unitId) {
+        return
+      }
+
+      const normalizedKey = unitId.toLowerCase()
+
+      if (seenIds.has(normalizedKey)) {
+        return
+      }
+
+      seenIds.add(normalizedKey)
+      dedupedIds.push(unitId)
+    })
+
+    if (dedupedIds.length !== EMERGENCY_UNIT_COUNTS[vehicleType]) {
+      return null
+    }
+
+    dedupedIds.forEach((unitId) => {
+      units.push({
+        id: unitId,
+        vehicleType,
+      })
+    })
+  }
+
+  const targetSpeedCandidate = toFiniteNumber(source.targetSpeedMph ?? source.target_speed_mph)
+  const targetSpeedMph =
+    targetSpeedCandidate === null
+      ? EMERGENCY_PATROL_SPEED_MPH
+      : Math.max(25, Math.min(60, targetSpeedCandidate))
+
+  return {
+    targetSpeedMph,
+    routes,
+    units,
+  }
+}
 
 const extractIframeSource = (value: string) => {
   const iframeSourceMatch = value.match(/<iframe[^>]+src=["']([^"']+)["']/i)
@@ -2179,7 +2546,7 @@ const resolveCongregationCategoryLabel = (category: string) => {
 }
 
 const resolveCongregationCategoryIcon = (category: string) =>
-  isCongregationSubLayerKey(category) ? CONGREGATION_ICON_BY_CATEGORY[category] : '📍'
+  isCongregationSubLayerKey(category) ? CONGREGATION_ICON_BY_CATEGORY[category] : '??'
 
 const resolveCongregationCategoryTheme = (category: string): CongregationPinTheme => {
   if (category === 'school' || category === 'stadium' || category === 'arena') {
@@ -2604,6 +2971,39 @@ const hydrateIncident = (incident: IncidentResult, index: number): IncidentUnit 
   }
 }
 
+const DISPATCH_ROUTE_SOURCE_ID = 'emergency-dispatch-route-source'
+const DISPATCH_ROUTE_LAYER_ID = 'emergency-dispatch-route-layer'
+const EMPTY_DISPATCH_ROUTE_FEATURE_COLLECTION: any = {
+  type: 'FeatureCollection',
+  features: [],
+}
+
+const ensureDispatchRouteLayer = (map: maptilersdk.Map) => {
+  if (!map.getSource(DISPATCH_ROUTE_SOURCE_ID)) {
+    map.addSource(DISPATCH_ROUTE_SOURCE_ID, {
+      type: 'geojson',
+      data: EMPTY_DISPATCH_ROUTE_FEATURE_COLLECTION,
+    })
+  }
+
+  if (!map.getLayer(DISPATCH_ROUTE_LAYER_ID)) {
+    map.addLayer({
+      id: DISPATCH_ROUTE_LAYER_ID,
+      type: 'line',
+      source: DISPATCH_ROUTE_SOURCE_ID,
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round',
+      },
+      paint: {
+        'line-color': '#ffcc00',
+        'line-width': 6,
+        'line-dasharray': [1, 1],
+      },
+    })
+  }
+}
+
 const ensureTrafficFlowLayer = (map: maptilersdk.Map) => {
   if (!map.getSource(TOMTOM_TRAFFIC_SOURCE_ID)) {
     map.addSource(TOMTOM_TRAFFIC_SOURCE_ID, {
@@ -2724,7 +3124,123 @@ function App() {
   const [selectedUnit, setSelectedUnit] = useState<SelectedUnit | null>(null)
   const [isCommandSidebarOpen, setIsCommandSidebarOpen] = useState(true)
   const [isIncidentsPanelOpen, setIsIncidentsPanelOpen] = useState(true)
+  const [isThreatMenuOpen, setIsThreatMenuOpen] = useState(false)
+  const [riskPrediction, setRiskPrediction] =
+    useState<PredictionApiResponse>(DEFAULT_RISK_PREDICTION)
+  const [riskPredictionError, setRiskPredictionError] = useState('')
+  const [threatActionStatusById, setThreatActionStatusById] = useState<
+    Record<string, ThreatActionStatus>
+  >({})
   const [isUnitWidgetDismissed, setIsUnitWidgetDismissed] = useState(false)
+  const [isLayersSectionOpen, setIsLayersSectionOpen] = useState(true)
+  const [isEmergencySectionOpen, setIsEmergencySectionOpen] = useState(false)
+  const [dispatchFormState, setDispatchFormState] = useState<Record<string, { lat: string, lng: string }>>(
+    {},
+  )
+  const [expandedControlVehicle, setExpandedControlVehicle] = useState<string | null>(null)
+
+  const refreshEmergencyVehiclesFromRuntime = () => {
+    const updateTimestamp = Date.now()
+    emergencyVehicleLastTickRef.current = updateTimestamp
+
+    setEmergencyVehicles(
+      advanceEmergencyVehicleSimulation(
+        emergencyVehicleRuntimeRef.current,
+        emergencyVehicleRoutesRef.current,
+        0,
+        updateTimestamp,
+      ),
+    )
+  }
+
+  const resetDispatchActionToPending = (dispatchActionId: string) => {
+    if (!dispatchActionId) {
+      return
+    }
+
+    setThreatActionStatusById((current) => ({
+      ...current,
+      [dispatchActionId]: 'idle',
+    }))
+  }
+
+  const handleUpdateDispatchForm = (key: string, field: 'lat' | 'lng', value: string) => {
+    setDispatchFormState((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
+  }
+
+  const manuallyDispatchVehicle = (key: string) => {
+    const form = dispatchFormState[key]
+    if (!form || !form.lat || !form.lng) {
+      return
+    }
+
+    const lat = parseFloat(form.lat)
+    const lng = parseFloat(form.lng)
+    if (isNaN(lat) || isNaN(lng)) {
+      return
+    }
+
+    const runtime = emergencyVehicleRuntimeRef.current.find((candidate) => candidate.key === key)
+
+    if (runtime) {
+      const canceledDispatchActionId = runtime.dispatchActionId
+
+      runtime.dispatchRoute = null
+      runtime.dispatchDistanceMeters = 0
+      runtime.dispatchTargetLabel = 'Manual Dispatch'
+      runtime.dispatchActionId = ''
+      runtime.isStationedAtDispatchTarget = false
+      runtime.overrideLocation = { latitude: lat, longitude: lng, headingDegrees: 0 }
+      runtime.overrideStatus = 'responding'
+
+      resetDispatchActionToPending(canceledDispatchActionId)
+      refreshEmergencyVehiclesFromRuntime()
+    }
+  }
+
+  const manuallyStageVehicle = (key: string) => {
+    const runtime = emergencyVehicleRuntimeRef.current.find((candidate) => candidate.key === key)
+    const snapshot = emergencyVehicles.find((candidate) => candidate.key === key)
+
+    if (runtime && snapshot) {
+      const canceledDispatchActionId = runtime.dispatchActionId
+
+      runtime.dispatchRoute = null
+      runtime.dispatchDistanceMeters = 0
+      runtime.dispatchTargetLabel = ''
+      runtime.dispatchActionId = ''
+      runtime.isStationedAtDispatchTarget = false
+      runtime.overrideLocation = {
+        latitude: snapshot.latitude,
+        longitude: snapshot.longitude,
+        headingDegrees: snapshot.headingDegrees,
+      }
+      runtime.overrideStatus = 'staged'
+
+      resetDispatchActionToPending(canceledDispatchActionId)
+      refreshEmergencyVehiclesFromRuntime()
+    }
+  }
+
+  const manuallyPatrolVehicle = (key: string) => {
+    const runtime = emergencyVehicleRuntimeRef.current.find((candidate) => candidate.key === key)
+
+    if (runtime) {
+      const canceledDispatchActionId = runtime.dispatchActionId
+
+      runtime.dispatchRoute = null
+      runtime.dispatchDistanceMeters = 0
+      runtime.dispatchTargetLabel = ''
+      runtime.dispatchActionId = ''
+      runtime.isStationedAtDispatchTarget = false
+      runtime.overrideLocation = undefined
+      runtime.overrideStatus = undefined
+
+      resetDispatchActionToPending(canceledDispatchActionId)
+      refreshEmergencyVehiclesFromRuntime()
+    }
+  }
+
   const [unitWidgetPosition, setUnitWidgetPosition] = useState<UnitWidgetPosition>({
     x: 18,
     y: 18,
@@ -2736,6 +3252,7 @@ function App() {
   const [cctvLoading, setCctvLoading] = useState(false)
   const [cctvError, setCctvError] = useState('')
   const [cctvPlaybackError, setCctvPlaybackError] = useState('')
+  const [emergencyVehicleError, setEmergencyVehicleError] = useState('')
   const [rotorcraftLoading, setRotorcraftLoading] = useState(false)
   const [rotorcraftError, setRotorcraftError] = useState('')
   const [rotorcraftFeedStats, setRotorcraftFeedStats] = useState<RotorcraftFeedStats>(
@@ -2814,6 +3331,56 @@ function App() {
       .sort((a, b) => b.ts - a.ts)
       .slice(0, 3)
   }, [selectedIncident])
+
+  const threatActionItems = useMemo<ThreatActionItem[]>(() => {
+    const policeDispatch = riskPrediction.mitigation_strategy.police_dispatch
+    const medicalStandby = riskPrediction.mitigation_strategy.medical_standby
+    const dispatchActions = policeDispatch.assigned_units.map((unit) => {
+      const normalizedUnitId = unit.vehicle_id
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
+
+      return {
+        id: `dispatch-${normalizedUnitId || 'unit'}`,
+        label: `Dispatch ${unit.vehicle_id}`,
+        detail: `${policeDispatch.action} � Feed status: ${unit.status}`,
+        kind: 'dispatch' as const,
+        dispatchVehicleId: unit.vehicle_id,
+      }
+    })
+
+    return [
+      ...dispatchActions,
+      {
+        id: 'medical-standby',
+        label: 'Prepare Medical Standby',
+        detail: `${medicalStandby.unit_id} ${medicalStandby.instruction}`,
+        kind: 'medical',
+      },
+      {
+        id: 'traffic-reroute',
+        label: 'Apply Traffic Re-route',
+        detail: riskPrediction.mitigation_strategy.traffic_control['re-routing'],
+        kind: 'traffic',
+      },
+    ]
+  }, [riskPrediction])
+
+  useEffect(() => {
+    setThreatActionStatusById((current) => {
+      const validActionIds = new Set(threatActionItems.map((actionItem) => actionItem.id))
+      const nextStatusById: Record<string, ThreatActionStatus> = {}
+
+      Object.entries(current).forEach(([actionId, status]) => {
+        if (validActionIds.has(actionId)) {
+          nextStatusById[actionId] = status
+        }
+      })
+
+      return nextStatusById
+    })
+  }, [threatActionItems])
 
   const incidentLevelSummary = useMemo(() => {
     const levelZero = incidents.filter((incident) => incident.level === 0).length
@@ -2957,6 +3524,150 @@ function App() {
     })
   }, [])
 
+  const syncThreatDispatchStatuses = useCallback(() => {
+    setThreatActionStatusById((current) => {
+      const nextStatusById = { ...current }
+
+      threatActionItems.forEach((actionItem) => {
+        if (actionItem.kind === 'dispatch') {
+          nextStatusById[actionItem.id] = 'idle'
+        }
+      })
+
+      emergencyVehicleRuntimeRef.current.forEach((runtime) => {
+        if (!runtime.dispatchActionId) {
+          return
+        }
+
+        nextStatusById[runtime.dispatchActionId] = runtime.isStationedAtDispatchTarget
+          ? 'complete'
+          : 'active'
+      })
+
+      return nextStatusById
+    })
+  }, [threatActionItems])
+
+  const dispatchEmergencyUnitToRisk = useCallback(
+    async (actionItem: ThreatActionItem) => {
+      if (actionItem.kind !== 'dispatch' || !actionItem.dispatchVehicleId) {
+        return
+      }
+
+      setThreatActionStatusById((current) => ({
+        ...current,
+        [actionItem.id]: 'active',
+      }))
+
+      const runtime = emergencyVehicleRuntimeRef.current.find(
+        (candidate) =>
+          candidate.unitCode.toLowerCase() === actionItem.dispatchVehicleId?.toLowerCase(),
+      )
+
+      if (!runtime) {
+        setThreatActionStatusById((current) => ({
+          ...current,
+          [actionItem.id]: 'error',
+        }))
+        return
+      }
+
+      const currentPosition = getEmergencyRuntimeCoordinates(
+        runtime,
+        emergencyVehicleRoutesRef.current,
+      )
+
+      try {
+        const routeResponse = await fetch(EMERGENCY_ROUTE_DISPATCH_API, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            start: {
+              latitude: currentPosition.latitude,
+              longitude: currentPosition.longitude,
+            },
+            target: {
+              latitude: riskPrediction.risk_assessment.coordinates.latitude,
+              longitude: riskPrediction.risk_assessment.coordinates.longitude,
+            },
+          }),
+        })
+
+        if (!routeResponse.ok) {
+          throw new Error('Unable to route emergency unit to risk zone.')
+        }
+
+        const routePayload = (await routeResponse.json()) as RoadRouteApiResponse
+        const routePoints: [number, number][] = []
+
+        routePayload.coordinates.forEach((coordinate) => {
+          if (!Array.isArray(coordinate) || coordinate.length < 2) {
+            return
+          }
+
+          const longitude = toFiniteNumber(coordinate[0])
+          const latitude = toFiniteNumber(coordinate[1])
+
+          if (longitude === null || latitude === null) {
+            return
+          }
+
+          routePoints.push([longitude, latitude])
+        })
+
+        const dispatchRoute = buildEmergencyRouteFromPoints(
+          `dispatch-${runtime.key}-${Date.now()}`,
+          `Dispatch ${runtime.unitCode}`,
+          routePoints,
+          false,
+        )
+
+        if (!dispatchRoute) {
+          throw new Error('No routable path was generated for this dispatch.')
+        }
+
+        runtime.dispatchRoute = dispatchRoute
+        runtime.dispatchDistanceMeters = 0
+        runtime.dispatchTargetLabel = riskPrediction.risk_assessment.location_name
+        runtime.dispatchActionId = actionItem.id
+        runtime.isStationedAtDispatchTarget = false
+
+        const updateTimestamp = Date.now()
+        emergencyVehicleLastTickRef.current = updateTimestamp
+
+        setEmergencyVehicles(
+          advanceEmergencyVehicleSimulation(
+            emergencyVehicleRuntimeRef.current,
+            emergencyVehicleRoutesRef.current,
+            0,
+            updateTimestamp,
+          ),
+        )
+
+        syncThreatDispatchStatuses()
+      } catch {
+        setThreatActionStatusById((current) => ({
+          ...current,
+          [actionItem.id]: 'error',
+        }))
+      }
+    },
+    [riskPrediction, syncThreatDispatchStatuses],
+  )
+
+  const handleThreatActionPress = useCallback(
+    (actionItem: ThreatActionItem) => {
+      if (actionItem.kind !== 'dispatch') {
+        return
+      }
+
+      void dispatchEmergencyUnitToRisk(actionItem)
+    },
+    [dispatchEmergencyUnitToRisk],
+  )
+
   const closeUnitWidget = useCallback(() => {
     setIsUnitWidgetDismissed(true)
     setSelectedUnit(null)
@@ -3030,6 +3741,39 @@ function App() {
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+  }, [])
+
+  useEffect(() => {
+    const fetchController = new AbortController()
+
+    const syncRiskPrediction = async () => {
+      try {
+        const response = await fetch(RISK_PREDICTION_API, {
+          signal: fetchController.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error('Risk prediction API request failed.')
+        }
+
+        const predictionResponse = (await response.json()) as PredictionApiResponse
+        setRiskPrediction(predictionResponse)
+        setRiskPredictionError('')
+      } catch {
+        if (fetchController.signal.aborted) {
+          return
+        }
+
+        setRiskPrediction(DEFAULT_RISK_PREDICTION)
+        setRiskPredictionError('Risk API unavailable. Showing fallback prediction payload.')
+      }
+    }
+
+    void syncRiskPrediction()
+
+    return () => {
+      fetchController.abort()
     }
   }, [])
 
@@ -3683,43 +4427,156 @@ function App() {
       emergencyVehicleRuntimeRef.current = []
       emergencyVehicleRoutesRef.current = []
       emergencyVehicleLastTickRef.current = 0
+      setEmergencyVehicleError('')
       setEmergencyVehicles([])
+      setThreatActionStatusById({})
       return
     }
 
-    const routes = buildEmergencyRoutes(initialCenter)
-    const runtimes = createEmergencyVehicleRuntimes(routes)
-    const timestamp = Date.now()
+    const controller = new AbortController()
+    let isDisposed = false
+    let simulationTimerId: number | null = null
 
-    emergencyVehicleRoutesRef.current = routes
-    emergencyVehicleRuntimeRef.current = runtimes
-    emergencyVehicleLastTickRef.current = timestamp
+    const startEmergencySimulation = async () => {
+      setEmergencyVehicleError('')
 
-    setEmergencyVehicles(advanceEmergencyVehicleSimulation(runtimes, routes, 0, timestamp))
+      try {
+        const response = await fetch(EMERGENCY_FLEET_SOURCE_FILE, {
+          cache: 'no-store',
+          signal: controller.signal,
+        })
 
-    const simulationTimer = window.setInterval(() => {
-      const tickTimestamp = Date.now()
-      const elapsedSeconds = Math.max(
-        0.35,
-        Math.min(2.8, (tickTimestamp - emergencyVehicleLastTickRef.current) / 1_000),
-      )
+        if (!response.ok) {
+          throw new Error('Unable to load emergency fleet payload.')
+        }
 
-      emergencyVehicleLastTickRef.current = tickTimestamp
+        const payload = (await response.json()) as unknown
+        const fleetSnapshot = parseEmergencyFleetPayload(payload)
 
-      setEmergencyVehicles(
-        advanceEmergencyVehicleSimulation(
-          emergencyVehicleRuntimeRef.current,
-          emergencyVehicleRoutesRef.current,
-          elapsedSeconds,
-          tickTimestamp,
-        ),
-      )
-    }, EMERGENCY_SIMULATION_UPDATE_MS)
+        if (!fleetSnapshot) {
+          throw new Error('Emergency fleet payload is invalid.')
+        }
+
+        if (controller.signal.aborted || isDisposed) {
+          return
+        }
+
+        const snappedFleetRoutes = await Promise.all(
+          fleetSnapshot.routes.map(async (routeBlueprint) => {
+            const waypointPayload: RoadWaypoint[] = routeBlueprint.points.map(
+              ([longitude, latitude]) => ({
+                latitude,
+                longitude,
+              }),
+            )
+
+            try {
+              const routeResponse = await fetch(EMERGENCY_ROUTE_WAYPOINTS_API, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  waypoints: waypointPayload,
+                  is_loop: true,
+                }),
+                signal: controller.signal,
+              })
+
+              if (!routeResponse.ok) {
+                return routeBlueprint
+              }
+
+              const routePayload = (await routeResponse.json()) as RoadRouteApiResponse
+              const routePoints: [number, number][] = []
+
+              routePayload.coordinates.forEach((coordinate) => {
+                if (!Array.isArray(coordinate) || coordinate.length < 2) {
+                  return
+                }
+
+                const longitude = toFiniteNumber(coordinate[0])
+                const latitude = toFiniteNumber(coordinate[1])
+
+                if (longitude === null || latitude === null) {
+                  return
+                }
+
+                routePoints.push([longitude, latitude])
+              })
+
+              return routePoints.length >= 2
+                ? {
+                    ...routeBlueprint,
+                    points: routePoints,
+                  }
+                : routeBlueprint
+            } catch {
+              return routeBlueprint
+            }
+          }),
+        )
+
+        if (controller.signal.aborted || isDisposed) {
+          return
+        }
+
+        const routes = buildEmergencyRoutes(DEFAULT_CENTER, snappedFleetRoutes, false)
+        const runtimes = createEmergencyVehicleRuntimes(routes, fleetSnapshot)
+        const timestamp = Date.now()
+
+        emergencyVehicleRoutesRef.current = routes
+        emergencyVehicleRuntimeRef.current = runtimes
+        emergencyVehicleLastTickRef.current = timestamp
+
+        setEmergencyVehicles(advanceEmergencyVehicleSimulation(runtimes, routes, 0, timestamp))
+        syncThreatDispatchStatuses()
+
+        simulationTimerId = window.setInterval(() => {
+          const tickTimestamp = Date.now()
+          const elapsedSeconds = Math.max(
+            0.35,
+            Math.min(2.8, (tickTimestamp - emergencyVehicleLastTickRef.current) / 1_000),
+          )
+
+          emergencyVehicleLastTickRef.current = tickTimestamp
+
+          setEmergencyVehicles(
+            advanceEmergencyVehicleSimulation(
+              emergencyVehicleRuntimeRef.current,
+              emergencyVehicleRoutesRef.current,
+              elapsedSeconds,
+              tickTimestamp,
+            ),
+          )
+          syncThreatDispatchStatuses()
+        }, EMERGENCY_SIMULATION_UPDATE_MS)
+      } catch {
+        if (controller.signal.aborted || isDisposed) {
+          return
+        }
+
+        emergencyVehicleRuntimeRef.current = []
+        emergencyVehicleRoutesRef.current = []
+        emergencyVehicleLastTickRef.current = 0
+        setEmergencyVehicles([])
+        setEmergencyVehicleError(
+          'Emergency vehicle layer unavailable. Verify emergency-fleet.json IDs and GraphML routing API.',
+        )
+      }
+    }
+
+    void startEmergencySimulation()
 
     return () => {
-      window.clearInterval(simulationTimer)
+      isDisposed = true
+      controller.abort()
+
+      if (simulationTimerId !== null) {
+        window.clearInterval(simulationTimerId)
+      }
     }
-  }, [activeLayers.emergencyVehiclePins, hasResolvedInitialCenter, initialCenter])
+  }, [activeLayers.emergencyVehiclePins, hasResolvedInitialCenter, syncThreatDispatchStatuses])
 
   useEffect(() => {
     if (!viewportBounds || !activeLayers.rotorcraftPins) {
@@ -3858,6 +4715,66 @@ function App() {
       map.off('load', applyTrafficFlowLayer)
     }
   }, [activeLayers.trafficFlow])
+
+  useEffect(() => {
+    const map = mapRef.current
+
+    if (!map) {
+      return
+    }
+
+    const applyDispatchRouteLayer = () => {
+      if (!map.isStyleLoaded()) {
+        return
+      }
+
+      ensureDispatchRouteLayer(map)
+
+      const vehicle = emergencyVehicles.find((v) => v.key === selectedEmergencyVehicleKey)
+
+      if (vehicle && vehicle.status === 'responding' && vehicle.dispatchRoutePoints) {
+        const source = map.getSource(DISPATCH_ROUTE_SOURCE_ID) as 
+          | { setData: (data: any) => void } 
+          | undefined
+        if (source) {
+          source.setData({
+            type: 'FeatureCollection',
+            features: [
+              {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: vehicle.dispatchRoutePoints,
+                },
+              },
+            ],
+          })
+        }
+        
+        if (map.getLayer(DISPATCH_ROUTE_LAYER_ID)) {
+          map.setLayoutProperty(DISPATCH_ROUTE_LAYER_ID, 'visibility', 'visible')
+        }
+      } else {
+        const source = map.getSource(DISPATCH_ROUTE_SOURCE_ID) as 
+          | { setData: (data: any) => void } 
+          | undefined
+        if (source) {
+          source.setData(EMPTY_DISPATCH_ROUTE_FEATURE_COLLECTION)
+        }
+        if (map.getLayer(DISPATCH_ROUTE_LAYER_ID)) {
+          map.setLayoutProperty(DISPATCH_ROUTE_LAYER_ID, 'visibility', 'none')
+        }
+      }
+    }
+
+    applyDispatchRouteLayer()
+    map.on('load', applyDispatchRouteLayer)
+
+    return () => {
+      map.off('load', applyDispatchRouteLayer)
+    }
+  }, [emergencyVehicles, selectedEmergencyVehicleKey])
 
   useEffect(() => {
     if (!viewportBounds || !activeLayers.riskHeatmap) {
@@ -4289,8 +5206,8 @@ function App() {
       popupMeta.textContent =
         place.category === 'worship'
           ? place.denominationRaw
-            ? `${place.categoryLabel} • ${place.religionLabel} • ${place.denominationRaw}`
-            : `${place.categoryLabel} • ${place.religionRaw}`
+            ? `${place.categoryLabel} � ${place.religionLabel} � ${place.denominationRaw}`
+            : `${place.categoryLabel} � ${place.religionRaw}`
           : place.categoryLabel
       popupRoot.append(popupMeta)
 
@@ -4338,7 +5255,7 @@ function App() {
 
       const iconElement = document.createElement('span')
       iconElement.className = 'cctv-pin__icon'
-      iconElement.textContent = '📹'
+      iconElement.textContent = '??'
       markerElement.append(iconElement)
 
       markerElement.addEventListener('click', (event) => {
@@ -4391,8 +5308,8 @@ function App() {
       markerElement.type = 'button'
       markerElement.className = `emergency-vehicle-pin emergency-vehicle-pin--${vehicle.vehicleType}${
         vehicle.key === selectedEmergencyVehicleKey ? ' emergency-vehicle-pin--active' : ''
-      }`
-      markerElement.title = `${vehicle.unitCode} • ${vehicle.vehicleLabel}`
+      }${vehicle.status === 'responding' ? ' emergency-vehicle-pin--flashing' : ''}`
+      markerElement.title = `${vehicle.unitCode} � ${vehicle.vehicleLabel}`
       markerElement.setAttribute('aria-label', `${vehicle.vehicleLabel} ${vehicle.unitCode}`)
 
       const iconElement = document.createElement('span')
@@ -4409,15 +5326,15 @@ function App() {
       popupRoot.className = 'emergency-vehicle-popup'
 
       const popupTitle = document.createElement('strong')
-      popupTitle.textContent = `${vehicle.unitCode} • ${vehicle.vehicleLabel}`
+      popupTitle.textContent = `${vehicle.unitCode} � ${vehicle.vehicleLabel}`
       popupRoot.append(popupTitle)
 
       const popupStatus = document.createElement('span')
-      popupStatus.textContent = `${EMERGENCY_STATUS_LABEL_BY_CODE[vehicle.status]} • ETA ${vehicle.etaMinutes} MIN`
+      popupStatus.textContent = `${EMERGENCY_STATUS_LABEL_BY_CODE[vehicle.status]} � ETA ${vehicle.etaMinutes} MIN`
       popupRoot.append(popupStatus)
 
       const popupRoute = document.createElement('span')
-      popupRoute.textContent = `${vehicle.routeLabel} • HDG ${Math.round(vehicle.headingDegrees)}°`
+      popupRoute.textContent = `${vehicle.routeLabel} � HDG ${Math.round(vehicle.headingDegrees)}�`
       popupRoot.append(popupRoute)
 
       const popupAssignment = document.createElement('span')
@@ -4464,7 +5381,7 @@ function App() {
       markerElement.className = `rotorcraft-pin rotorcraft-pin--${aircraft.pinTheme}${
         aircraft.key === selectedAircraftKey ? ' rotorcraft-pin--active' : ''
       }`
-      markerElement.title = `${aircraft.callsign} (${aircraft.icao24.toUpperCase()}) • ${aircraft.categoryLabel}`
+      markerElement.title = `${aircraft.callsign} (${aircraft.icao24.toUpperCase()}) � ${aircraft.categoryLabel}`
       markerElement.setAttribute('aria-label', `Aircraft ${aircraft.callsign}`)
 
       const iconElement = document.createElement('span')
@@ -4485,24 +5402,24 @@ function App() {
       popupRoot.append(popupTitle)
 
       const popupIdentity = document.createElement('span')
-      popupIdentity.textContent = `${aircraft.icao24.toUpperCase()} • ${aircraft.originCountry}`
+      popupIdentity.textContent = `${aircraft.icao24.toUpperCase()} � ${aircraft.originCountry}`
       popupRoot.append(popupIdentity)
 
       const popupCategory = document.createElement('span')
       popupCategory.textContent =
         aircraft.category === null
           ? aircraft.categoryLabel
-          : `${aircraft.categoryLabel} • CATEGORY ${aircraft.category}`
+          : `${aircraft.categoryLabel} � CATEGORY ${aircraft.category}`
       popupRoot.append(popupCategory)
 
       const popupFlight = document.createElement('span')
-      popupFlight.textContent = `${formatAircraftSpeed(aircraft.speedKnots)} • ${formatAircraftHeading(
+      popupFlight.textContent = `${formatAircraftSpeed(aircraft.speedKnots)} � ${formatAircraftHeading(
         aircraft.trueTrack,
       )}`
       popupRoot.append(popupFlight)
 
       const popupAltitude = document.createElement('span')
-      popupAltitude.textContent = `${formatAircraftAltitude(aircraft.altitudeMeters)} • ${
+      popupAltitude.textContent = `${formatAircraftAltitude(aircraft.altitudeMeters)} � ${
         aircraft.onGround ? 'ON GROUND' : 'AIRBORNE'
       }`
       popupRoot.append(popupAltitude)
@@ -4638,8 +5555,13 @@ function App() {
           </div>
           <p className="panel-subtext">Toggle live overlays and tactical instrumentation.</p>
 
-          <div className="layer-stack">
-            <label className="layer-toggle">
+          <div className="section-heading" onClick={() => setIsLayersSectionOpen(o => !o)} style={{ cursor: "pointer", marginTop: "1rem", borderBottom: "1px solid #333", paddingBottom: "4px" }}>
+            <h2 style={{ fontSize: "14px", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", color: "#ccc" }}>Layers {isLayersSectionOpen ? "[-]" : "[+]"}</h2>
+          </div>
+
+          {isLayersSectionOpen && ( <>
+            <div className="layer-stack" style={{ marginTop: "0.5rem" }}>
+              <label className="layer-toggle">
               <input
                 type="checkbox"
                 checked={activeLayers.incidentPins}
@@ -4789,35 +5711,35 @@ function App() {
 
             <span className="legend-label">CCTV Layer</span>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">📹</span>
+              <span className="legend-glyph">??</span>
               Camera feed (YouTube, m3u8, or embed URL)
             </div>
 
             <span className="legend-label">Emergency Layer</span>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">🚓</span>
+              <span className="legend-glyph">??</span>
               Police patrol car
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">🚑</span>
+              <span className="legend-glyph">??</span>
               Ambulance
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">🚒</span>
+              <span className="legend-glyph">??</span>
               Firetruck
             </div>
 
             <span className="legend-label">Congregation Icons</span>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">🎓</span>
+              <span className="legend-glyph">??</span>
               School
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">🏟</span>
+              <span className="legend-glyph">??</span>
               Stadium
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">🎪</span>
+              <span className="legend-glyph">??</span>
               Arena
             </div>
 
@@ -4839,49 +5761,49 @@ function App() {
 
             <span className="legend-label">Aviation Layer</span>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">🚁</span>
+              <span className="legend-glyph">??</span>
               Rotorcraft
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">✈</span>
+              <span className="legend-glyph">?</span>
               Heavy / Large / High-performance
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">🛩</span>
+              <span className="legend-glyph">??</span>
               Light / Small
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">🪂</span>
+              <span className="legend-glyph">??</span>
               Glider / Lighter-than-air / Ultralight
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">🛸</span>
+              <span className="legend-glyph">??</span>
               Unmanned aerial vehicle
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">🚐</span>
+              <span className="legend-glyph">??</span>
               Surface categories / obstacles
             </div>
 
             <span className="legend-label">Worship Icons</span>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">✝</span>
+              <span className="legend-glyph">?</span>
               Christian
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">☪</span>
+              <span className="legend-glyph">?</span>
               Muslim
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">✡</span>
+              <span className="legend-glyph">?</span>
               Jewish
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">☸</span>
+              <span className="legend-glyph">?</span>
               Buddhist
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">ॐ</span>
+              <span className="legend-glyph">?</span>
               Hindu
             </div>
             <div className="pin-legend__religion">
@@ -4889,6 +5811,59 @@ function App() {
               Sikh
             </div>
           </div>
+
+            </>
+          )}
+
+          <div className="section-heading" onClick={() => setIsEmergencySectionOpen(o => !o)} style={{ cursor: "pointer", marginTop: "1rem", borderBottom: "1px solid #333", paddingBottom: "4px" }}>
+            <h2 style={{ fontSize: "14px", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", color: "#ccc" }}>Emergency Vehicles {isEmergencySectionOpen ? "[-]" : "[+]"}</h2>
+          </div>
+          
+          {isEmergencySectionOpen && (
+            <div className="emergency-vehicles-section" style={{ marginTop: "0.5rem" }}>
+              {emergencyVehicles.slice().sort((a,b) => a.vehicleType.localeCompare(b.vehicleType)).map(vehicle => {
+                const statusColor = vehicle.status === "patrolling" ? "green" : vehicle.status === "responding" ? "yellow" : "red";
+                const isExpanded = expandedControlVehicle === vehicle.key;
+                return (
+                  <div key={vehicle.key} style={{ padding: "0.5rem", borderBottom: "1px dotted #333" }}>
+                    <div 
+                      style={{ display: "flex", alignItems: "center", cursor: "pointer" }} 
+                      onClick={() => setExpandedControlVehicle(isExpanded ? null : vehicle.key)}
+                    >
+                      <span style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: statusColor, marginRight: "8px", flexShrink: 0 }}></span>
+                      <strong>{vehicle.unitCode} ({vehicle.vehicleType}) - {vehicle.status}</strong>
+                    </div>
+                    
+                    {isExpanded && (
+                      <div style={{ marginTop: "0.5rem", paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                        <div style={{ display: "flex", gap: "4px" }}>
+                          <input 
+                            type="text" 
+                            placeholder="Lat" 
+                            value={dispatchFormState[vehicle.key]?.lat || ""} 
+                            onChange={(e) => handleUpdateDispatchForm(vehicle.key, "lat", e.target.value)}
+                            style={{ flex: 1, minWidth: 0, backgroundColor: "#1e1e1e", color: "white", border: "1px solid #444", padding: "2px" }}
+                          />
+                          <input 
+                            type="text" 
+                            placeholder="Lng" 
+                            value={dispatchFormState[vehicle.key]?.lng || ""} 
+                            onChange={(e) => handleUpdateDispatchForm(vehicle.key, "lng", e.target.value)}
+                            style={{ flex: 1, minWidth: 0, backgroundColor: "#1e1e1e", color: "white", border: "1px solid #444", padding: "2px" }}
+                          />
+                          <button onClick={(e) => { e.stopPropagation(); manuallyDispatchVehicle(vehicle.key); }} style={{ padding: "2px 6px", backgroundColor: "#333", color: "white", border: "1px solid #555" }}>Go</button>
+                        </div>
+                        <div style={{ display: "flex", gap: "4px" }}>
+                          <button onClick={(e) => { e.stopPropagation(); manuallyStageVehicle(vehicle.key); }} style={{ padding: "4px", backgroundColor: "#333", color: "white", border: "1px solid #555", flex: 1 }}>Stage Here</button>
+                          <button onClick={(e) => { e.stopPropagation(); manuallyPatrolVehicle(vehicle.key); }} style={{ padding: "4px", backgroundColor: "#333", color: "white", border: "1px solid #555", flex: 1 }}>Patrol</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
 
           <div className="panel-metrics">
             <div>
@@ -4991,10 +5966,14 @@ function App() {
             <p className="panel-warning">Syncing CCTV camera layer...</p>
           ) : null}
           {activeLayers.cctvPins && cctvError ? <p className="panel-warning">{cctvError}</p> : null}
-          {activeLayers.emergencyVehiclePins ? (
+          {activeLayers.emergencyVehiclePins && emergencyVehicleError ? (
+            <p className="panel-warning">{emergencyVehicleError}</p>
+          ) : null}
+          {activeLayers.emergencyVehiclePins && !emergencyVehicleError ? (
             <p className="panel-warning">
-              Simulated feed mode: emergency vehicle locations are synthetic until a live CAD/AVL feed
-              is connected.
+              Local Tempe fleet mode: IDs are loaded from emergency-fleet.json (20 patrol, 6
+              ambulances, 11 firetrucks), routes are snapped to tempe_road_graph.graphml road
+              geometry, and dispatch actions auto-track active/completed states.
             </p>
           ) : null}
           {activeLayers.riskHeatmap ? (
@@ -5079,7 +6058,7 @@ function App() {
                     : selectedAircraft
                       ? `ICAO24 ${selectedAircraft.icao24.toUpperCase()}`
                       : selectedEmergencyVehicle
-                        ? `${selectedEmergencyVehicle.unitCode} • ${EMERGENCY_STATUS_LABEL_BY_CODE[selectedEmergencyVehicle.status].toUpperCase()}`
+                        ? `${selectedEmergencyVehicle.unitCode} � ${EMERGENCY_STATUS_LABEL_BY_CODE[selectedEmergencyVehicle.status].toUpperCase()}`
                       : selectedCctv
                         ? `${selectedCctv.streamType.toUpperCase()} STREAM`
                       : `${selectedCongregation?.osmType.toUpperCase()} ${selectedCongregation?.osmId}`}
@@ -5123,7 +6102,7 @@ function App() {
             {selectedAircraft ? (
               <>
                 <p className="unit-widget__address">
-                  {selectedAircraft.originCountry} • {selectedAircraft.categoryLabel}
+                  {selectedAircraft.originCountry} � {selectedAircraft.categoryLabel}
                 </p>
 
                 <div className="unit-widget__stats">
@@ -5171,7 +6150,7 @@ function App() {
             {selectedEmergencyVehicle ? (
               <>
                 <p className="unit-widget__address">
-                  {selectedEmergencyVehicle.assignment} • {selectedEmergencyVehicle.district}
+                  {selectedEmergencyVehicle.assignment} � {selectedEmergencyVehicle.district}
                 </p>
 
                 <div className="unit-widget__stats">
@@ -5200,7 +6179,7 @@ function App() {
                   </p>
                   <p>
                     <span>Heading</span>
-                    {`HDG ${Math.round(selectedEmergencyVehicle.headingDegrees)}°`}
+                    {`HDG ${Math.round(selectedEmergencyVehicle.headingDegrees)}�`}
                   </p>
                   <p>
                     <span>Crew</span>
@@ -5273,7 +6252,7 @@ function App() {
               <>
                 <p className="unit-widget__address">
                   {selectedCongregation.categoryLabel}
-                  {selectedCongregation.religionLabel ? ` • ${selectedCongregation.religionLabel}` : ''}
+                  {selectedCongregation.religionLabel ? ` � ${selectedCongregation.religionLabel}` : ''}
                 </p>
 
                 <div className="unit-widget__updates">
@@ -5303,6 +6282,83 @@ function App() {
             ) : null}
           </section>
         ) : null}
+
+        <section className={`threat-menu${isThreatMenuOpen ? ' threat-menu--open' : ''}`}>
+          <button
+            type="button"
+            className="threat-menu__toggle"
+            onClick={() => setIsThreatMenuOpen((current) => !current)}
+            aria-expanded={isThreatMenuOpen}
+            aria-controls="threat-menu-panel"
+          >
+            <span className="threat-menu__toggle-label">Threat Notification</span>
+            <strong>{`${riskPrediction.risk_assessment.level.toUpperCase()} RISK`}</strong>
+            <span className="threat-menu__toggle-state">
+              {isThreatMenuOpen ? 'Collapse' : 'Expand'}
+            </span>
+          </button>
+
+          {isThreatMenuOpen ? (
+            <div className="threat-menu__panel" id="threat-menu-panel">
+              <div className="threat-menu__section">
+                <h3>{riskPrediction.risk_assessment.location_name}</h3>
+                <p className="threat-menu__meta">
+                  <span>{riskPrediction.prediction_id}</span>
+                  <span>{new Date(riskPrediction.timestamp).toLocaleString()}</span>
+                </p>
+                {riskPredictionError ? <p className="threat-menu__notice">{riskPredictionError}</p> : null}
+                <p className="threat-menu__copy">{riskPrediction.risk_assessment.explanation}</p>
+              </div>
+
+              <div className="threat-menu__section">
+                <h4>Threat Factors</h4>
+                <ul className="threat-menu__list">
+                  {riskPrediction.risk_assessment.risk_factors.map((factor) => (
+                    <li key={factor}>{factor}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="threat-menu__section">
+                <h4>Possible Solutions</h4>
+                <div className="threat-menu__copy-grid">
+                  <p>
+                    <span>Police Dispatch</span>
+                    {riskPrediction.mitigation_strategy.police_dispatch.action}
+                  </p>
+                  <p>
+                    <span>Medical Standby</span>
+                    {riskPrediction.mitigation_strategy.medical_standby.message}
+                  </p>
+                  <p>
+                    <span>Traffic Control</span>
+                    {riskPrediction.mitigation_strategy.traffic_control['re-routing']}
+                  </p>
+                </div>
+                <div className="threat-menu__actions">
+                  {threatActionItems.map((actionItem) => {
+                    const actionStatus = threatActionStatusById[actionItem.id] ?? 'idle'
+
+                    return (
+                      <button
+                        key={actionItem.id}
+                        type="button"
+                        className={`threat-menu__action-button threat-menu__action-button--${actionStatus}`}
+                        onClick={() => handleThreatActionPress(actionItem)}
+                      >
+                        <strong>{actionItem.label}</strong>
+                        <span>{actionItem.detail}</span>
+                        <em className={`threat-menu__action-status threat-menu__action-status--${actionStatus}`}>
+                          {threatActionStatusLabel(actionStatus)}
+                        </em>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </section>
 
         {activeLayers.incidentPins ? (
           <section className={`unit-strip${isIncidentsPanelOpen ? '' : ' unit-strip--collapsed'}`}>

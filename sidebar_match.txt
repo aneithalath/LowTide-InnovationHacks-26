@@ -1,0 +1,388 @@
+<div className="terminal-sidebar__panel">
+          <div className="panel-heading">
+            <p>Command Layers</p>
+            <h1>Unit Tracking</h1>
+          </div>
+          <p className="panel-subtext">Toggle live overlays and tactical instrumentation.</p>
+
+          <div className="layer-stack">
+            <label className="layer-toggle">
+              <input
+                type="checkbox"
+                checked={activeLayers.incidentPins}
+                onChange={() => toggleLayer('incidentPins')}
+              />
+              <span className="layer-toggle__content">
+                <strong>Incident Pins</strong>
+                <small>Unit markers from field telemetry</small>
+              </span>
+            </label>
+
+            <label className="layer-toggle">
+              <input
+                type="checkbox"
+                checked={activeLayers.congregationPins}
+                onChange={() => toggleLayer('congregationPins')}
+              />
+              <span className="layer-toggle__content">
+                <strong>Congregation Areas</strong>
+                <small>Parent layer for high-congregation OpenStreetMap sublayers</small>
+              </span>
+            </label>
+
+            {activeLayers.congregationPins ? (
+              <div className="layer-sublayer-stack">
+                {CONGREGATION_SUBLAYER_KEYS.map((layerKey) => (
+                  <label key={layerKey} className="layer-toggle layer-toggle--sub">
+                    <input
+                      type="checkbox"
+                      checked={congregationSubLayers[layerKey]}
+                      onChange={() => toggleCongregationSubLayer(layerKey)}
+                    />
+                    <span className="layer-toggle__content">
+                      <strong>{CONGREGATION_SUBLAYER_LABELS[layerKey]}</strong>
+                      <small>
+                        {layerKey === 'worship'
+                          ? 'amenity=place_of_worship'
+                          : layerKey === 'school'
+                            ? 'amenity=school'
+                            : layerKey === 'hospital'
+                              ? 'amenity=hospital'
+                              : layerKey === 'stadium'
+                                ? 'leisure=stadium'
+                                : 'leisure=arena'}
+                      </small>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            ) : null}
+
+            <label className="layer-toggle">
+              <input
+                type="checkbox"
+                checked={activeLayers.cctvPins}
+                onChange={() => toggleLayer('cctvPins')}
+              />
+              <span className="layer-toggle__content">
+                <strong>CCTV Cameras</strong>
+                <small>Static camera pins from cams.json with live embedded streams</small>
+              </span>
+            </label>
+
+            <label className="layer-toggle">
+              <input
+                type="checkbox"
+                checked={activeLayers.emergencyVehiclePins}
+                onChange={() => toggleLayer('emergencyVehiclePins')}
+              />
+              <span className="layer-toggle__content">
+                <strong>Emergency Vehicles</strong>
+                <small>Simulated police, EMS, and fire geolocation feed moving along road corridors</small>
+              </span>
+            </label>
+
+            <label className="layer-toggle">
+              <input
+                type="checkbox"
+                checked={activeLayers.rotorcraftPins}
+                onChange={() => toggleLayer('rotorcraftPins')}
+              />
+              <span className="layer-toggle__content">
+                <strong>Aircraft</strong>
+                <small>OpenSky Network aircraft with category-based icons</small>
+              </span>
+            </label>
+
+            <label className="layer-toggle">
+              <input
+                type="checkbox"
+                checked={activeLayers.trafficFlow}
+                onChange={() => toggleLayer('trafficFlow')}
+              />
+              <span className="layer-toggle__content">
+                <strong>Traffic Flow</strong>
+                <small>TomTom raster flow tiles showing road congestion</small>
+              </span>
+            </label>
+
+            <label className="layer-toggle">
+              <input
+                type="checkbox"
+                checked={activeLayers.riskHeatmap}
+                onChange={() => toggleLayer('riskHeatmap')}
+              />
+              <span className="layer-toggle__content">
+                <strong>Risk Heatmap</strong>
+                <small>Grid-scored risk model, green safer and red higher risk</small>
+              </span>
+            </label>
+
+            <label className="layer-toggle">
+              <input
+                type="checkbox"
+                checked={activeLayers.tacticalGrid}
+                onChange={() => toggleLayer('tacticalGrid')}
+              />
+              <span className="layer-toggle__content">
+                <strong>Tactical Grid</strong>
+                <small>Reference grid for district alignment</small>
+              </span>
+            </label>
+
+            <label className="layer-toggle">
+              <input
+                type="checkbox"
+                checked={activeLayers.scanLines}
+                onChange={() => toggleLayer('scanLines')}
+              />
+              <span className="layer-toggle__content">
+                <strong>Scan Lines</strong>
+                <small>Terminal scan texture overlay</small>
+              </span>
+            </label>
+          </div>
+
+          <div className="pin-legend">
+            <span className="legend-label">Pin Legend</span>
+            <div>
+              <span className="legend-dot legend-dot--yellow" />
+              Level 0
+            </div>
+            <div>
+              <span className="legend-dot legend-dot--red" />
+              Level 1+
+            </div>
+
+            <span className="legend-label">CCTV Layer</span>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">=���</span>
+              Camera feed (YouTube, m3u8, or embed URL)
+            </div>
+
+            <span className="legend-label">Emergency Layer</span>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">=���</span>
+              Police patrol car
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">=���</span>
+              Ambulance
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">=���</span>
+              Firetruck
+            </div>
+
+            <span className="legend-label">Congregation Icons</span>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">=���</span>
+              School
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">=�Ń</span>
+              Stadium
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">=�Ĭ</span>
+              Arena
+            </div>
+
+            <span className="legend-label">Traffic Overlay</span>
+            <div className="pin-legend__religion">Flow raster style: relative0-dark (TomTom)</div>
+            <div className="pin-legend__religion">Traffic flow \u00a9 TomTom</div>
+
+            <span className="legend-label">Risk Heatmap</span>
+            <div className="risk-legend-bar" />
+            <div className="pin-legend__religion">
+              Green = safer, yellow = medium risk, red = higher risk.
+            </div>
+            <div className="pin-legend__religion">
+              High risk: congregation + high traffic + level 1+ incident nearby.
+            </div>
+            <div className="pin-legend__religion">
+              Low risk: emergency vehicles + CCTV + low traffic nearby.
+            </div>
+
+            <span className="legend-label">Aviation Layer</span>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">=���</span>
+              Rotorcraft
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">G��</span>
+              Heavy / Large / High-performance
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">=���</span>
+              Light / Small
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">=���</span>
+              Glider / Lighter-than-air / Ultralight
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">=��+</span>
+              Unmanned aerial vehicle
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">=���</span>
+              Surface categories / obstacles
+            </div>
+
+            <span className="legend-label">Worship Icons</span>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">G��</span>
+              Christian
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">G��</span>
+              Muslim
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">G��</span>
+              Jewish
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">G�+</span>
+              Buddhist
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">a��</span>
+              Hindu
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">G��</span>
+              Sikh
+            </div>
+          </div>
+
+          <div className="panel-metrics">
+            <div>
+              <span>Total Incidents</span>
+              <strong>{incidentLevelSummary.total.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Level 0</span>
+              <strong>{incidentLevelSummary.levelZero.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Level 1+</span>
+              <strong>{incidentLevelSummary.levelOnePlus.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Risk Grid Cells</span>
+              <strong>{riskHeatmapSummary.total.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>High-Risk Cells</span>
+              <strong>{riskHeatmapSummary.highRiskCells.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Medium-Risk Cells</span>
+              <strong>{riskHeatmapSummary.mediumRiskCells.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Low-Risk Cells</span>
+              <strong>{riskHeatmapSummary.lowRiskCells.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Average Risk</span>
+              <strong>{`${Math.round(riskHeatmapSummary.averageScore * 100)}%`}</strong>
+            </div>
+            <div>
+              <span>Congregation Pins</span>
+              <strong>{congregationSummary.total.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Types Tracked</span>
+              <strong>{congregationSummary.trackedCategories.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Religions Tracked</span>
+              <strong>{congregationSummary.trackedReligions.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>CCTV Cameras</span>
+              <strong>{cctvSummary.total.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Emergency Units</span>
+              <strong>{emergencyVehicleSummary.total.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Police Units</span>
+              <strong>{emergencyVehicleSummary.police.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Ambulances</span>
+              <strong>{emergencyVehicleSummary.ambulances.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Firetrucks</span>
+              <strong>{emergencyVehicleSummary.firetrucks.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Aircraft Tracked</span>
+              <strong>{aircraftSummary.total.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Airborne Aircraft</span>
+              <strong>{aircraftSummary.airborne.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>OpenSky States</span>
+              <strong>{rotorcraftFeedStats.totalStates.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Categorized States</span>
+              <strong>{rotorcraftFeedStats.statesWithCategory.toString().padStart(2, '0')}</strong>
+            </div>
+            <div>
+              <span>Mappable States</span>
+              <strong>{rotorcraftFeedStats.statesWithCoordinates.toString().padStart(2, '0')}</strong>
+            </div>
+          </div>
+
+          {incidentError ? <p className="panel-warning">{incidentError}</p> : null}
+          {activeLayers.congregationPins && !hasEnabledCongregationSubLayers ? (
+            <p className="panel-warning">Enable one or more congregation sublayers to display pins.</p>
+          ) : null}
+          {activeLayers.congregationPins && hasEnabledCongregationSubLayers && congregationLoading ? (
+            <p className="panel-warning">Syncing OpenStreetMap congregation areas...</p>
+          ) : null}
+          {activeLayers.congregationPins && hasEnabledCongregationSubLayers && congregationError ? (
+            <p className="panel-warning">{congregationError}</p>
+          ) : null}
+          {activeLayers.cctvPins && cctvLoading ? (
+            <p className="panel-warning">Syncing CCTV camera layer...</p>
+          ) : null}
+          {activeLayers.cctvPins && cctvError ? <p className="panel-warning">{cctvError}</p> : null}
+          {activeLayers.emergencyVehiclePins ? (
+            <p className="panel-warning">
+              Simulated feed mode: emergency vehicle locations are synthetic until a live CAD/AVL feed
+              is connected.
+            </p>
+          ) : null}
+          {activeLayers.riskHeatmap ? (
+            <p className="panel-warning">
+              Risk heatmap active: each grid cell blends incidents, congregation density, traffic,
+              CCTV, and emergency proximity.
+            </p>
+          ) : null}
+          {activeLayers.riskHeatmap && riskHeatmapFallbackCount > 0 ? (
+            <p className="panel-warning">
+              {`Traffic fallback applied in ${riskHeatmapFallbackCount} cell${
+                riskHeatmapFallbackCount === 1 ? '' : 's'
+              }; local pin-density estimates replaced missing live traffic samples.`}
+            </p>
+          ) : null}
+          {activeLayers.rotorcraftPins && rotorcraftLoading ? (
+            <p className="panel-warning">Syncing OpenSky aircraft feed...</p>
+          ) : null}
+          {activeLayers.rotorcraftPins && rotorcraftError ? (
+            <p className="panel-warning">{rotorcraftError}</p>
+          ) : null}
+          </div>
+        ) : null}
+      
