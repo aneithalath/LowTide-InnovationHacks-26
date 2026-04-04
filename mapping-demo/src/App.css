@@ -1130,7 +1130,14 @@
   transform: scale(1.15);
   box-shadow:
     0 0 0 3px rgba(0, 0, 0, 0.55),
-    0 0 0 2px rgba(255, 255, 255, 0.76);
+    0 0 0 2px rgba(42, 214, 125, 0.92),
+    0 0 18px rgba(42, 214, 125, 0.5);
+}
+
+.emergency-vehicle-pin--selected {
+  border-color: #2ad67d !important;
+  outline: 3px solid rgba(42, 214, 125, 0.92);
+  outline-offset: 1px;
 }
 
 .emergency-vehicle-pin--police {
@@ -1157,7 +1164,8 @@
 }
 
 .emergency-vehicle-pin__icon {
-  font-size: 0.92rem;
+  font-size: 1rem;
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
   line-height: 1;
   pointer-events: none;
 }

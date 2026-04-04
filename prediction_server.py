@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from functools import lru_cache
 from pathlib import Path
+from threading import Lock
 
 import networkx as nx
 from fastapi import FastAPI, HTTPException
@@ -21,6 +24,11 @@ app.add_middleware(
 )
 
 GRAPH_PATH = Path(__file__).resolve().parent / 'data_collection' / 'data' / 'tempe_road_graph.graphml'
+EMERGENCY_SNAPSHOT_PATH = (
+    Path(__file__).resolve().parent / 'data_collection' / 'data' / 'emergency_vehicle_state.json'
+)
+_emergency_snapshot_lock = Lock()
+_last_emergency_snapshot_digest: str | None = None
 
 
 class CoordinatePayload(BaseModel):
@@ -36,6 +44,34 @@ class DispatchRouteRequest(BaseModel):
 class WaypointRouteRequest(BaseModel):
     waypoints: list[CoordinatePayload]
     is_loop: bool = False
+
+
+class EmergencyTelemetryRoute(BaseModel):
+    id: str
+    label: str
+    points: list[tuple[float, float]]
+
+
+class EmergencyTelemetryVehicle(BaseModel):
+    key: str
+    unitCode: str
+    vehicleType: str
+    status: str
+    latitude: float
+    longitude: float
+    headingDegrees: float
+    speedMph: float
+    routeLabel: str
+    patrolRouteId: str | None = None
+    activeRouteType: str
+    dispatchRoutePoints: list[tuple[float, float]] | None = None
+
+
+class EmergencyTelemetrySnapshot(BaseModel):
+    timestamp: int
+    simulationIntervalMs: int
+    patrolRoutes: list[EmergencyTelemetryRoute]
+    vehicles: list[EmergencyTelemetryVehicle]
 
 PREDICTION_RESPONSE = {
     'prediction_id': 'risk-analysis-2026-04-04-8832',
@@ -221,6 +257,13 @@ def _polyline_distance_meters(polyline: list[tuple[float, float]]) -> float:
     return total_distance
 
 
+def _write_json_atomic(path: Path, serialized_json: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_suffix(f'{path.suffix}.tmp')
+    temp_path.write_text(serialized_json, encoding='utf-8')
+    temp_path.replace(path)
+
+
 def _shortest_path_coordinates(
     routing_graph: nx.DiGraph,
     start_coordinate: CoordinatePayload,
@@ -331,6 +374,48 @@ def route_waypoints(payload: WaypointRouteRequest) -> dict:
         'coordinates': route_coordinates,
         'distance_meters': route_distance,
         'source': 'tempe_road_graph.graphml',
+    }
+
+
+@app.get('/telemetry/emergency-snapshot')
+def get_emergency_snapshot() -> dict:
+    if not EMERGENCY_SNAPSHOT_PATH.exists():
+        return {
+            'timestamp': 0,
+            'simulationIntervalMs': 0,
+            'patrolRoutes': [],
+            'vehicles': [],
+        }
+
+    try:
+        return json.loads(EMERGENCY_SNAPSHOT_PATH.read_text(encoding='utf-8'))
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=500, detail='Snapshot file is corrupted.') from exc
+
+
+@app.post('/telemetry/emergency-snapshot')
+def save_emergency_snapshot(payload: EmergencyTelemetrySnapshot) -> dict:
+    global _last_emergency_snapshot_digest
+
+    snapshot_dict = payload.model_dump()
+    serialized_snapshot = json.dumps(snapshot_dict, separators=(',', ':'), ensure_ascii=False)
+    snapshot_digest = hashlib.sha256(serialized_snapshot.encode('utf-8')).hexdigest()
+
+    with _emergency_snapshot_lock:
+        if snapshot_digest == _last_emergency_snapshot_digest:
+            return {
+                'status': 'unchanged',
+                'vehicles': len(payload.vehicles),
+                'file': str(EMERGENCY_SNAPSHOT_PATH),
+            }
+
+        _write_json_atomic(EMERGENCY_SNAPSHOT_PATH, serialized_snapshot)
+        _last_emergency_snapshot_digest = snapshot_digest
+
+    return {
+        'status': 'written',
+        'vehicles': len(payload.vehicles),
+        'file': str(EMERGENCY_SNAPSHOT_PATH),
     }
 
 

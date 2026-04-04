@@ -252,6 +252,7 @@ type EmergencyVehicleRuntime = {
   dispatchTargetLabel: string
   dispatchActionId: string
   isStationedAtDispatchTarget: boolean
+  returnToPatrolDistanceMeters: number | null
   overrideLocation?: { latitude: number, longitude: number, headingDegrees: number }
   overrideStatus?: 'patrolling' | 'responding' | 'staged'
 }
@@ -277,6 +278,34 @@ type RoadRouteApiResponse = {
   distance_meters: number
 }
 
+type EmergencyTelemetrySnapshotRoute = {
+  id: string
+  label: string
+  points: [number, number][]
+}
+
+type EmergencyTelemetrySnapshotVehicle = {
+  key: string
+  unitCode: string
+  vehicleType: EmergencyVehicleType
+  status: EmergencyVehicleStatus
+  latitude: number
+  longitude: number
+  headingDegrees: number
+  speedMph: number
+  routeLabel: string
+  patrolRouteId: string | null
+  activeRouteType: 'patrol' | 'dispatch'
+  dispatchRoutePoints: [number, number][] | null
+}
+
+type EmergencyTelemetrySnapshotPayload = {
+  timestamp: number
+  simulationIntervalMs: number
+  patrolRoutes: EmergencyTelemetrySnapshotRoute[]
+  vehicles: EmergencyTelemetrySnapshotVehicle[]
+}
+
 type EmergencyVehicleUnit = {
   key: string
   unitCode: string
@@ -297,6 +326,7 @@ type EmergencyVehicleUnit = {
   lastUpdate: number
   telemetry: string[]
   dispatchRoutePoints?: [number, number][]
+  patrolRoutePoints?: [number, number][]
 }
 
 type SelectedUnit =
@@ -417,6 +447,9 @@ const EMERGENCY_ROUTE_DISPATCH_API =
   import.meta.env.VITE_EMERGENCY_ROUTE_DISPATCH_API ?? 'http://127.0.0.1:8000/route/dispatch'
 const EMERGENCY_ROUTE_WAYPOINTS_API =
   import.meta.env.VITE_EMERGENCY_ROUTE_WAYPOINTS_API ?? 'http://127.0.0.1:8000/route/waypoints'
+const EMERGENCY_TELEMETRY_SNAPSHOT_API =
+  import.meta.env.VITE_EMERGENCY_TELEMETRY_SNAPSHOT_API ??
+  'http://127.0.0.1:8000/telemetry/emergency-snapshot'
 const AIRCRAFT_CACHE_API = '/api/aircraft-cache'
 const AIRCRAFT_CACHE_FILE = '/aircraft-cache.json'
 const AIRCRAFT_CACHE_STORAGE_KEY = 'mapping-demo:aircraft-cache:v1'
@@ -425,6 +458,7 @@ const AIRCRAFT_CACHE_MIN_VIEWPORT_OVERLAP = 0.82
 const CONGREGATION_CACHE_TILE_SIZE = 0.025
 const CONGREGATION_CACHE_MAX_TILE_SCAN = 4_000
 const EMERGENCY_SIMULATION_UPDATE_MS = 1_000
+const EMERGENCY_TELEMETRY_PUSH_INTERVAL_MS = 1_000
 const EMERGENCY_PATROL_SPEED_MPH = 45
 const KNOTS_PER_METER_PER_SECOND = 1.943844
 const FEET_PER_METER = 3.28084
@@ -593,9 +627,9 @@ const EMERGENCY_VEHICLE_LABEL_BY_TYPE: Record<EmergencyVehicleType, string> = {
 }
 
 const EMERGENCY_VEHICLE_ICON_BY_TYPE: Record<EmergencyVehicleType, string> = {
-  police: '??',
-  ambulance: '??',
-  firetruck: '??',
+  police: '\uD83D\uDE93',
+  ambulance: '\uD83D\uDE91',
+  firetruck: '\uD83D\uDE92',
 }
 
 const EMERGENCY_STATUS_LABEL_BY_CODE: Record<EmergencyVehicleStatus, string> = {
@@ -2020,6 +2054,67 @@ const getEmergencyRuntimeCoordinates = (
   }
 }
 
+const findClosestPointOnEmergencyRoute = (
+  route: EmergencyVehicleRoute,
+  coordinate: [number, number],
+) => {
+  if (!route.points.length || !route.segmentLengths.length) {
+    return null
+  }
+
+  let closestPoint = route.points[0]
+  let closestDistance = Number.POSITIVE_INFINITY
+  let closestDistanceAlongRoute = 0
+  let accumulatedDistance = 0
+
+  for (let segmentIndex = 0; segmentIndex < route.segmentLengths.length; segmentIndex += 1) {
+    const segmentStart = route.points[segmentIndex]
+    const segmentEnd = route.points[segmentIndex + 1]
+    const segmentLength = route.segmentLengths[segmentIndex]
+
+    if (!segmentStart || !segmentEnd || segmentLength <= 0) {
+      accumulatedDistance += Math.max(0, segmentLength)
+      continue
+    }
+
+    const averageLatitude = (segmentStart[1] + segmentEnd[1] + coordinate[1]) / 3
+    const metersPerLongitudeDegree = metersPerDegreeLongitude(averageLatitude)
+
+    const startX = segmentStart[0] * metersPerLongitudeDegree
+    const startY = segmentStart[1] * METERS_PER_DEGREE_LATITUDE
+    const endX = segmentEnd[0] * metersPerLongitudeDegree
+    const endY = segmentEnd[1] * METERS_PER_DEGREE_LATITUDE
+    const coordinateX = coordinate[0] * metersPerLongitudeDegree
+    const coordinateY = coordinate[1] * METERS_PER_DEGREE_LATITUDE
+
+    const segmentDx = endX - startX
+    const segmentDy = endY - startY
+    const segmentMagnitudeSquared = segmentDx * segmentDx + segmentDy * segmentDy
+    const projection =
+      segmentMagnitudeSquared <= 0
+        ? 0
+        : ((coordinateX - startX) * segmentDx + (coordinateY - startY) * segmentDy) /
+          segmentMagnitudeSquared
+    const segmentFraction = clampUnitInterval(projection)
+    const projectedPoint = interpolateRouteCoordinate(segmentStart, segmentEnd, segmentFraction)
+    const projectedDistance = calculateGroundDistanceMeters(coordinate, projectedPoint)
+
+    if (projectedDistance < closestDistance) {
+      closestDistance = projectedDistance
+      closestPoint = projectedPoint
+      closestDistanceAlongRoute = accumulatedDistance + segmentLength * segmentFraction
+    }
+
+    accumulatedDistance += segmentLength
+  }
+
+  return {
+    point: closestPoint,
+    distanceAlongRouteMeters: closestDistanceAlongRoute,
+    distanceFromCoordinateMeters: closestDistance,
+  }
+}
+
 const resolveEmergencyStatusFromPulse = (_pulse: number): EmergencyVehicleStatus => {
   return 'patrolling'
 }
@@ -2089,6 +2184,7 @@ const createEmergencyVehicleRuntimes = (
       dispatchTargetLabel: '',
       dispatchActionId: '',
       isStationedAtDispatchTarget: false,
+      returnToPatrolDistanceMeters: null,
     })
   })
 
@@ -2115,9 +2211,11 @@ const buildEmergencyVehicleSnapshot = (
       }
   const isDispatchRouteActive = runtime.dispatchRoute !== null
   const originalStatus = isDispatchRouteActive
-    ? runtime.isStationedAtDispatchTarget
-      ? 'staged'
-      : 'responding'
+    ? runtime.returnToPatrolDistanceMeters !== null
+      ? 'patrolling'
+      : runtime.isStationedAtDispatchTarget
+        ? 'staged'
+        : 'responding'
     : resolveEmergencyStatusFromPulse(statusPulse)
   const status = runtime.overrideStatus ?? originalStatus
   
@@ -2144,9 +2242,11 @@ const buildEmergencyVehicleSnapshot = (
   const fuelPulse = (Math.sin(timestamp / 21_000 + runtime.fuelPhaseSeed) + 1) / 2
   const fuelLevelPercent = Math.round(35 + fuelPulse * 60)
   const routeLabel = runtime.dispatchRoute
-    ? runtime.isStationedAtDispatchTarget
-      ? `Stationed � ${runtime.dispatchTargetLabel}`
-      : `Dispatch � ${runtime.dispatchTargetLabel}`
+    ? runtime.returnToPatrolDistanceMeters !== null
+      ? `Rejoin � ${runtime.dispatchTargetLabel}`
+      : runtime.isStationedAtDispatchTarget
+        ? `Stationed � ${runtime.dispatchTargetLabel}`
+        : `Dispatch � ${runtime.dispatchTargetLabel}`
     : (routeContext?.route.label ?? 'Patrol Route')
 
   return {
@@ -2168,6 +2268,8 @@ const buildEmergencyVehicleSnapshot = (
     fuelLevelPercent,
     lastUpdate: timestamp,
     dispatchRoutePoints: isDispatchRouteActive && status === 'responding' ? runtime.dispatchRoute?.points : undefined,
+    patrolRoutePoints:
+      !isDispatchRouteActive && status === 'patrolling' ? routeContext?.route.points : undefined,
     telemetry: buildEmergencyTelemetry(
       runtime.vehicleType,
       status,
@@ -2191,8 +2293,13 @@ const advanceEmergencyVehicleSimulation = (
   }
 
   return runtimes.map((runtime) => {
-    const isResponding = runtime.dispatchRoute && !runtime.isStationedAtDispatchTarget
-    const currentSpeed = isResponding ? (60 * 1609.344) / 3600 : runtime.baseSpeedMetersPerSecond
+    const isRiskDispatchActive =
+      runtime.dispatchRoute &&
+      !runtime.isStationedAtDispatchTarget &&
+      runtime.returnToPatrolDistanceMeters === null
+    const currentSpeed = isRiskDispatchActive
+      ? (60 * 1609.344) / 3600
+      : runtime.baseSpeedMetersPerSecond
     const movementMeters = currentSpeed * elapsedSeconds
 
     if (runtime.dispatchRoute) {
@@ -2203,8 +2310,24 @@ const advanceEmergencyVehicleSimulation = (
         )
 
         if (runtime.dispatchDistanceMeters >= runtime.dispatchRoute.totalLength - 2) {
-          runtime.dispatchDistanceMeters = runtime.dispatchRoute.totalLength
-          runtime.isStationedAtDispatchTarget = true
+          if (runtime.returnToPatrolDistanceMeters !== null) {
+            const patrolRoute = routes[runtime.routeIndex] ?? routes[0]
+
+            runtime.distanceAlongRouteMeters = patrolRoute
+              ? normalizeLoopedDistance(
+                  runtime.returnToPatrolDistanceMeters,
+                  patrolRoute.totalLength,
+                )
+              : runtime.returnToPatrolDistanceMeters
+            runtime.dispatchRoute = null
+            runtime.dispatchDistanceMeters = 0
+            runtime.dispatchTargetLabel = ''
+            runtime.isStationedAtDispatchTarget = false
+            runtime.returnToPatrolDistanceMeters = null
+          } else {
+            runtime.dispatchDistanceMeters = runtime.dispatchRoute.totalLength
+            runtime.isStationedAtDispatchTarget = true
+          }
         }
       }
     } else {
@@ -3093,6 +3216,8 @@ function App() {
   const emergencyVehicleRuntimeRef = useRef<EmergencyVehicleRuntime[]>([])
   const emergencyVehicleRoutesRef = useRef<EmergencyVehicleRoute[]>([])
   const emergencyVehicleLastTickRef = useRef(0)
+  const emergencyTelemetryLastPushAtRef = useRef(0)
+  const emergencyTelemetryLastPayloadRef = useRef('')
   const unitWidgetDragStateRef = useRef<UnitWidgetDragState | null>(null)
   const incidentFetchControllerRef = useRef<AbortController | null>(null)
   const congregationFetchControllerRef = useRef<AbortController | null>(null)
@@ -3190,6 +3315,7 @@ function App() {
       runtime.dispatchTargetLabel = 'Manual Dispatch'
       runtime.dispatchActionId = ''
       runtime.isStationedAtDispatchTarget = false
+      runtime.returnToPatrolDistanceMeters = null
       runtime.overrideLocation = { latitude: lat, longitude: lng, headingDegrees: 0 }
       runtime.overrideStatus = 'responding'
 
@@ -3210,6 +3336,7 @@ function App() {
       runtime.dispatchTargetLabel = ''
       runtime.dispatchActionId = ''
       runtime.isStationedAtDispatchTarget = false
+      runtime.returnToPatrolDistanceMeters = null
       runtime.overrideLocation = {
         latitude: snapshot.latitude,
         longitude: snapshot.longitude,
@@ -3224,17 +3351,54 @@ function App() {
 
   const manuallyPatrolVehicle = (key: string) => {
     const runtime = emergencyVehicleRuntimeRef.current.find((candidate) => candidate.key === key)
+    const snapshot = emergencyVehicles.find((candidate) => candidate.key === key)
 
     if (runtime) {
       const canceledDispatchActionId = runtime.dispatchActionId
+      const patrolRoutes = emergencyVehicleRoutesRef.current
+      const patrolRoute = patrolRoutes[runtime.routeIndex] ?? patrolRoutes[0]
+      const fallbackCoordinates = getEmergencyRuntimeCoordinates(runtime, patrolRoutes)
+      const currentPoint: [number, number] = snapshot
+        ? [snapshot.longitude, snapshot.latitude]
+        : [fallbackCoordinates.longitude, fallbackCoordinates.latitude]
+      const nearestPatrolPoint = patrolRoute
+        ? findClosestPointOnEmergencyRoute(patrolRoute, currentPoint)
+        : null
 
-      runtime.dispatchRoute = null
-      runtime.dispatchDistanceMeters = 0
-      runtime.dispatchTargetLabel = ''
       runtime.dispatchActionId = ''
-      runtime.isStationedAtDispatchTarget = false
       runtime.overrideLocation = undefined
       runtime.overrideStatus = undefined
+
+      if (patrolRoute && nearestPatrolPoint) {
+        runtime.distanceAlongRouteMeters = nearestPatrolPoint.distanceAlongRouteMeters
+
+        const rejoinRoute = buildEmergencyRouteFromPoints(
+          `return-${runtime.key}-${Date.now()}`,
+          `Return ${runtime.unitCode}`,
+          [currentPoint, nearestPatrolPoint.point],
+          false,
+        )
+
+        if (rejoinRoute && nearestPatrolPoint.distanceFromCoordinateMeters > 3) {
+          runtime.dispatchRoute = rejoinRoute
+          runtime.dispatchDistanceMeters = 0
+          runtime.dispatchTargetLabel = patrolRoute.label
+          runtime.isStationedAtDispatchTarget = false
+          runtime.returnToPatrolDistanceMeters = nearestPatrolPoint.distanceAlongRouteMeters
+        } else {
+          runtime.dispatchRoute = null
+          runtime.dispatchDistanceMeters = 0
+          runtime.dispatchTargetLabel = ''
+          runtime.isStationedAtDispatchTarget = false
+          runtime.returnToPatrolDistanceMeters = null
+        }
+      } else {
+        runtime.dispatchRoute = null
+        runtime.dispatchDistanceMeters = 0
+        runtime.dispatchTargetLabel = ''
+        runtime.isStationedAtDispatchTarget = false
+        runtime.returnToPatrolDistanceMeters = null
+      }
 
       resetDispatchActionToPending(canceledDispatchActionId)
       refreshEmergencyVehiclesFromRuntime()
@@ -3633,6 +3797,7 @@ function App() {
         runtime.dispatchTargetLabel = riskPrediction.risk_assessment.location_name
         runtime.dispatchActionId = actionItem.id
         runtime.isStationedAtDispatchTarget = false
+        runtime.returnToPatrolDistanceMeters = null
 
         const updateTimestamp = Date.now()
         emergencyVehicleLastTickRef.current = updateTimestamp
@@ -4579,6 +4744,70 @@ function App() {
   }, [activeLayers.emergencyVehiclePins, hasResolvedInitialCenter, syncThreatDispatchStatuses])
 
   useEffect(() => {
+    const now = Date.now()
+    const patrolRoutes: EmergencyTelemetrySnapshotRoute[] = emergencyVehicleRoutesRef.current.map(
+      (route) => ({
+        id: route.id,
+        label: route.label,
+        points: route.points,
+      }),
+    )
+    const runtimeByKey = new Map(
+      emergencyVehicleRuntimeRef.current.map((runtime) => [runtime.key, runtime]),
+    )
+    const vehicles: EmergencyTelemetrySnapshotVehicle[] = emergencyVehicles.map((vehicle) => {
+      const runtime = runtimeByKey.get(vehicle.key)
+      const patrolRoute =
+        runtime && emergencyVehicleRoutesRef.current[runtime.routeIndex]
+          ? emergencyVehicleRoutesRef.current[runtime.routeIndex]
+          : null
+
+      return {
+        key: vehicle.key,
+        unitCode: vehicle.unitCode,
+        vehicleType: vehicle.vehicleType,
+        status: vehicle.status,
+        latitude: vehicle.latitude,
+        longitude: vehicle.longitude,
+        headingDegrees: vehicle.headingDegrees,
+        speedMph: vehicle.speedMph,
+        routeLabel: vehicle.routeLabel,
+        patrolRouteId: patrolRoute?.id ?? null,
+        activeRouteType: vehicle.status === 'responding' ? 'dispatch' : 'patrol',
+        dispatchRoutePoints: vehicle.dispatchRoutePoints ?? null,
+      }
+    })
+    const snapshotPayload: EmergencyTelemetrySnapshotPayload = {
+      timestamp: now,
+      simulationIntervalMs: EMERGENCY_SIMULATION_UPDATE_MS,
+      patrolRoutes,
+      vehicles,
+    }
+    const serializedPayload = JSON.stringify(snapshotPayload)
+    const shouldPushNow =
+      now - emergencyTelemetryLastPushAtRef.current >= EMERGENCY_TELEMETRY_PUSH_INTERVAL_MS
+    const hasSnapshotChanged = serializedPayload !== emergencyTelemetryLastPayloadRef.current
+
+    if (!shouldPushNow || !hasSnapshotChanged) {
+      return
+    }
+
+    emergencyTelemetryLastPushAtRef.current = now
+    emergencyTelemetryLastPayloadRef.current = serializedPayload
+
+    void fetch(EMERGENCY_TELEMETRY_SNAPSHOT_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: serializedPayload,
+      keepalive: true,
+    }).catch(() => {
+      // Keep simulation realtime even when local snapshot writes are unavailable.
+    })
+  }, [emergencyVehicles])
+
+  useEffect(() => {
     if (!viewportBounds || !activeLayers.rotorcraftPins) {
       rotorcraftFetchControllerRef.current?.abort()
       setRotorcraftLoading(false)
@@ -4731,11 +4960,18 @@ function App() {
       ensureDispatchRouteLayer(map)
 
       const vehicle = emergencyVehicles.find((v) => v.key === selectedEmergencyVehicleKey)
+      const routePoints =
+        vehicle?.status === 'responding'
+          ? vehicle.dispatchRoutePoints
+          : vehicle?.status === 'patrolling'
+            ? vehicle.patrolRoutePoints
+            : undefined
 
-      if (vehicle && vehicle.status === 'responding' && vehicle.dispatchRoutePoints) {
-        const source = map.getSource(DISPATCH_ROUTE_SOURCE_ID) as 
-          | { setData: (data: any) => void } 
+      if (vehicle && routePoints && routePoints.length >= 2) {
+        const source = map.getSource(DISPATCH_ROUTE_SOURCE_ID) as
+          | { setData: (data: any) => void }
           | undefined
+
         if (source) {
           source.setData({
             type: 'FeatureCollection',
@@ -4745,23 +4981,30 @@ function App() {
                 properties: {},
                 geometry: {
                   type: 'LineString',
-                  coordinates: vehicle.dispatchRoutePoints,
+                  coordinates: routePoints,
                 },
               },
             ],
           })
         }
-        
+
         if (map.getLayer(DISPATCH_ROUTE_LAYER_ID)) {
+          map.setPaintProperty(
+            DISPATCH_ROUTE_LAYER_ID,
+            'line-color',
+            vehicle.status === 'patrolling' ? '#2ad67d' : '#ffcc00',
+          )
           map.setLayoutProperty(DISPATCH_ROUTE_LAYER_ID, 'visibility', 'visible')
         }
       } else {
-        const source = map.getSource(DISPATCH_ROUTE_SOURCE_ID) as 
-          | { setData: (data: any) => void } 
+        const source = map.getSource(DISPATCH_ROUTE_SOURCE_ID) as
+          | { setData: (data: any) => void }
           | undefined
+
         if (source) {
           source.setData(EMPTY_DISPATCH_ROUTE_FEATURE_COLLECTION)
         }
+
         if (map.getLayer(DISPATCH_ROUTE_LAYER_ID)) {
           map.setLayoutProperty(DISPATCH_ROUTE_LAYER_ID, 'visibility', 'none')
         }
@@ -5308,6 +5551,7 @@ function App() {
       markerElement.type = 'button'
       markerElement.className = `emergency-vehicle-pin emergency-vehicle-pin--${vehicle.vehicleType}${
         vehicle.key === selectedEmergencyVehicleKey ? ' emergency-vehicle-pin--active' : ''
+      }${vehicle.key === selectedEmergencyVehicleKey ? ' emergency-vehicle-pin--selected' : ''
       }${vehicle.status === 'responding' ? ' emergency-vehicle-pin--flashing' : ''}`
       markerElement.title = `${vehicle.unitCode} � ${vehicle.vehicleLabel}`
       markerElement.setAttribute('aria-label', `${vehicle.vehicleLabel} ${vehicle.unitCode}`)
@@ -5824,11 +6068,28 @@ function App() {
               {emergencyVehicles.slice().sort((a,b) => a.vehicleType.localeCompare(b.vehicleType)).map(vehicle => {
                 const statusColor = vehicle.status === "patrolling" ? "green" : vehicle.status === "responding" ? "yellow" : "red";
                 const isExpanded = expandedControlVehicle === vehicle.key;
+                const isSelected = selectedEmergencyVehicleKey === vehicle.key
                 return (
-                  <div key={vehicle.key} style={{ padding: "0.5rem", borderBottom: "1px dotted #333" }}>
-                    <div 
-                      style={{ display: "flex", alignItems: "center", cursor: "pointer" }} 
-                      onClick={() => setExpandedControlVehicle(isExpanded ? null : vehicle.key)}
+                  <div
+                    key={vehicle.key}
+                    style={{
+                      padding: "0.5rem",
+                      borderBottom: "1px dotted #333",
+                      borderLeft: isSelected ? "2px solid #2ad67d" : "2px solid transparent",
+                      backgroundColor: isSelected ? "rgba(42, 214, 125, 0.12)" : "transparent",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        cursor: "pointer",
+                        color: isSelected ? "#2ad67d" : "#f2f4f8",
+                      }}
+                      onClick={() => {
+                        openEmergencyVehicle(vehicle.key)
+                        setExpandedControlVehicle(isExpanded ? null : vehicle.key)
+                      }}
                     >
                       <span style={{ width: "10px", height: "10px", borderRadius: "50%", backgroundColor: statusColor, marginRight: "8px", flexShrink: 0 }}></span>
                       <strong>{vehicle.unitCode} ({vehicle.vehicleType}) - {vehicle.status}</strong>
