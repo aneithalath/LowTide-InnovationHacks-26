@@ -25,13 +25,84 @@ CROWD_MODIFIER = {
 
 OVERPASS_QUERY = (
     "[out:json][timeout:25];"
-    "("
-    'node["amenity"~"school|hospital|place_of_worship"](33.36,-111.99,33.46,-111.89);'
-    'node["leisure"="stadium"](33.36,-111.99,33.46,-111.89);'
-    'node["building"="university"](33.36,-111.99,33.46,-111.89);'
+    "(" 
+    'node["amenity"~"school|hospital|place_of_worship|theatre|bar|nightclub|community_centre|arts_centre|cinema|library|college|conference_centre|civic_centre|event_venue"](33.36,-111.99,33.46,-111.89);'
+    'node["leisure"~"stadium|sports_centre|park|recreation_ground"](33.36,-111.99,33.46,-111.89);'
+    'node["building"~"university|public|civic|stadium|theatre|arena"](33.36,-111.99,33.46,-111.89);'
     ");"
     "out body;"
 )
+
+# Manual aliases for known high-risk venues/platforms (add more as needed)
+MANUAL_RISK_AREA_ALIASES = [
+    {
+        "name": "Desert Financial Arena",
+        "lat": 33.4166,
+        "lng": -111.9336,
+        "type": "arena",
+        "capacity": 14198,
+        "aliases": ["DFA", "ASU Sun Devil Athletics", "Desert Financial Arena", "Sun Devil Arena"]
+    },
+    {
+        "name": "Sun Devil Stadium",
+        "lat": 33.4269,
+        "lng": -111.9327,
+        "type": "stadium",
+        "capacity": 53599,
+        "aliases": ["Sun Devil Stadium", "ASU Stadium", "ASU Sun Devil Stadium"]
+    },
+    {
+        "name": "Downtown Tempe",
+        "lat": 33.4265,
+        "lng": -111.9400,
+        "type": "district",
+        "capacity": 10000,
+        "aliases": ["Downtown Tempe", "Mill Avenue", "Downtown Tempe, AZ"]
+    },
+    {
+        "name": "Eventbrite Platform",
+        "lat": 33.4255,
+        "lng": -111.9400,
+        "type": "platform",
+        "capacity": 5000,
+        "aliases": ["Eventbrite", "Meetup", "Facebook events", "Eventbrite Platform"]
+    },
+    # Add more as needed
+]
+
+
+def _manual_risk_area_records() -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    for alias in MANUAL_RISK_AREA_ALIASES:
+        records.append(
+            RiskArea(
+                id=f"manual_{alias['name'].replace(' ', '_').lower()}",
+                type=alias["type"],
+                name=alias["name"],
+                lat=alias["lat"],
+                lng=alias["lng"],
+                capacity=alias.get("capacity"),
+                crowd_modifier=1.0,
+                current_status="normal",
+                _simulated=True,
+            ).to_dict()
+        )
+    return records
+
+
+def _merge_manual_risk_areas(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    merged: list[dict[str, Any]] = [row for row in records if isinstance(row, dict)]
+    existing_ids = {str(row.get("id") or "").strip() for row in merged}
+    existing_names = {str(row.get("name") or "").strip().lower() for row in merged}
+
+    for manual in _manual_risk_area_records():
+        manual_id = str(manual.get("id") or "").strip()
+        manual_name = str(manual.get("name") or "").strip().lower()
+        if manual_id in existing_ids or manual_name in existing_names:
+            continue
+        merged.append(manual)
+
+    return merged
 
 
 def _log(message: str) -> None:
@@ -84,8 +155,11 @@ def fetch_risk_areas() -> list[dict[str, Any]]:
     try:
         if _cache_is_fresh(23):
             cached = _load_cache() or []
-            _log(f"risk_areas updated: {len(cached)} records")
-            return cached
+            merged_cached = _merge_manual_risk_areas(cached)
+            if len(merged_cached) != len(cached):
+                _write_cache(merged_cached)
+            _log(f"risk_areas updated: {len(merged_cached)} records")
+            return merged_cached
 
         response = requests.post(
             "https://overpass-api.de/api/interpreter",
@@ -118,9 +192,10 @@ def fetch_risk_areas() -> list[dict[str, Any]]:
                 ).to_dict()
             )
 
-        _write_cache(records)
-        _log(f"risk_areas updated: {len(records)} records")
-        return records
+        merged = _merge_manual_risk_areas(records)
+        _write_cache(merged)
+        _log(f"risk_areas updated: {len(merged)} records (including manual aliases)")
+        return merged
 
     except Exception as err:
         cached = _load_cache()

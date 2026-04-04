@@ -1,20 +1,48 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
-import time
-from datetime import datetime
+import re
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
-import requests
 from dotenv import load_dotenv
+from exa_py import Exa
 
 from schemas import Event
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 CACHE_PATH = DATA_DIR / "events_cache.json"
+RISK_AREAS_CACHE_PATH = DATA_DIR / "risk_areas_cache.json"
+
+EXA_QUERIES = [
+    # General events with structured info
+    "events in Tempe Arizona this week schedule location attendance crowd size",
+    
+    # Daily / near-term events (captures nightlife, pop-ups, smaller crowds too)
+    "things happening in Tempe AZ today or tonight event schedule attendance downtown Tempe Mill Avenue",
+    
+    # ASU-driven high-density events
+    "Arizona State University Tempe campus events this week schedule large events attendance graduation sports games",
+    
+    # Sports + major gatherings (high crowd signal)
+    "Tempe Arizona sports events schedule stadium games attendance Sun Devil Stadium Desert Financial Arena crowd size",
+    
+    # Festivals, concerts, public gatherings
+    "Tempe AZ festivals concerts parades public events this weekend attendance expected crowd size",
+    
+    # Religious + community gatherings (often missed but important)
+    "Tempe Arizona church events community gatherings weekend schedule attendance large services",
+    
+    # City / official + permits (best signal for large planned events)
+    "city of Tempe event calendar permits street closures large events attendance expected",
+    
+    # Event platforms (structured listings)
+    "Tempe AZ events Eventbrite Meetup Facebook events attendance RSVP count",
+]
 
 VENUE_CAPACITY = {
     "sun devil stadium": 53599,
@@ -31,28 +59,24 @@ TURNOUT_RATE = {
     "default": 0.55,
 }
 
-FALLBACK_EVENTS = [
-    {
-        "event_id": "sim_evt_001",
-        "name": "Tempe Downtown Community Patrol Briefing",
-        "type": "community",
-        "lat": 33.4192,
-        "lng": -111.9340,
-        "start_time": datetime.utcnow().isoformat(),
-        "end_time": datetime.utcnow().isoformat(),
-        "venue": "Tempe Civic Plaza",
-    },
-    {
-        "event_id": "sim_evt_002",
-        "name": "ASU Weekend Sports Event",
-        "type": "sports",
-        "lat": 33.4264,
-        "lng": -111.9325,
-        "start_time": datetime.utcnow().isoformat(),
-        "end_time": datetime.utcnow().isoformat(),
-        "venue": "Sun Devil Stadium",
-    },
-]
+GENERIC_SOURCE_TOKENS = {
+    "eventbrite",
+    "meetup",
+    "facebook events",
+    "wikipedia",
+    "downtowntempe",
+    "tempenews",
+    "signals az",
+}
+
+VENUE_ALIAS_TO_CANONICAL = {
+    "asu sun devil athletics": "Sun Devil Stadium",
+    "asu stadium": "Sun Devil Stadium",
+    "dfa": "Desert Financial Arena",
+    "marquee theatre": "Downtown Tempe",
+    "mill avenue": "Downtown Tempe",
+    "downtown tempe, az": "Downtown Tempe",
+}
 
 
 def _log(message: str) -> None:
@@ -81,6 +105,19 @@ def _write_cache(payload: list[dict[str, Any]]) -> None:
     os.replace(tmp_path, CACHE_PATH)
 
 
+def _load_risk_areas() -> list[dict[str, Any]]:
+    if not RISK_AREAS_CACHE_PATH.exists():
+        return []
+    try:
+        with RISK_AREAS_CACHE_PATH.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+        if isinstance(payload, list):
+            return [row for row in payload if isinstance(row, dict)]
+    except Exception:
+        return []
+    return []
+
+
 def _infer_event_type(name: str) -> str:
     lowered = (name or "").lower()
     if any(word in lowered for word in ("football", "basketball", "game", "match", "vs")):
@@ -101,173 +138,245 @@ def _parse_float(value: Any) -> float | None:
         return None
 
 
+def _obj_get(value: Any, field: str) -> Any:
+    if isinstance(value, dict):
+        return value.get(field)
+    return getattr(value, field, None)
+
+
+def _normalize_text(value: str) -> str:
+    lowered = (value or "").lower()
+    return re.sub(r"[^a-z0-9]+", " ", lowered).strip()
+
+
+def _is_generic_source_label(value: str) -> bool:
+    normalized = _normalize_text(value)
+    if not normalized:
+        return False
+    return any(token in normalized for token in GENERIC_SOURCE_TOKENS)
+
+
+def _canonicalize_candidate(value: str) -> str:
+    normalized = _normalize_text(value)
+    if not normalized:
+        return ""
+
+    for alias, canonical in VENUE_ALIAS_TO_CANONICAL.items():
+        if _normalize_text(alias) in normalized:
+            return canonical
+
+    return value
+
+
+def _event_id_from_url(url: str) -> str:
+    digest = hashlib.sha1(url.encode("utf-8")).hexdigest()
+    return f"exa_{digest}"
+
+
+def extract_crowd(text: str) -> int | None:
+    if not text:
+        return None
+
+    patterns = [
+        r"(\d[\d,]+)\s*(?:people|attendees|fans|guests|expected|capacity|tickets)",
+        r"(?:expected|estimated|capacity|attendance)[^\d]*(\d[\d,]+)",
+        r"(\d[\d,]+)\s*(?:seat|person)",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return int(match.group(1).replace(",", ""))
+
+    return None
+
+
 def _estimate_crowd(venue_name: str, event_type: str) -> int:
     venue_key = (venue_name or "").strip().lower()
-    capacity = VENUE_CAPACITY.get(venue_key, VENUE_CAPACITY["default"])
+    capacity = VENUE_CAPACITY["default"]
+    for key, known_capacity in VENUE_CAPACITY.items():
+        if key == "default":
+            continue
+        if key in venue_key or venue_key in key:
+            capacity = known_capacity
+            break
+
     turnout = TURNOUT_RATE.get(event_type, TURNOUT_RATE["default"])
     return int(round(capacity * turnout))
 
 
-def _normalize_event(
-    event_id: str,
-    name: str,
-    event_type: str,
-    lat: float | None,
-    lng: float | None,
-    start_time: str,
-    end_time: str,
-    venue_name: str,
-    expected_crowd: int | None,
-    simulated: bool,
-) -> dict[str, Any]:
-    crowd = expected_crowd
-    crowd_source = "reported"
-    is_simulated = simulated
+def _extract_venue_candidate(title: str, text: str) -> str:
+    title_text = (title or "").strip()
+    if not title_text:
+        return ""
 
-    if crowd is None:
-        crowd = _estimate_crowd(venue_name, event_type)
-        crowd_source = "estimated"
-        is_simulated = True
+    patterns = [
+        r"\bat\s+([A-Za-z0-9 '&\-\.]{3,80})",
+        r"@\s*([A-Za-z0-9 '&\-\.]{3,80})",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, title_text, re.IGNORECASE)
+        if match:
+            candidate = match.group(1).strip()
+            if not _is_generic_source_label(candidate):
+                return candidate
 
-    return Event(
-        event_id=event_id,
-        name=name,
-        type=event_type,
-        lat=lat,
-        lng=lng,
-        start_time=start_time,
-        end_time=end_time,
-        expected_crowd=crowd,
-        crowd_source=crowd_source,
-        _simulated=is_simulated,
-    ).to_dict()
+    if " - " in title_text:
+        parts = [part.strip() for part in title_text.split(" - ") if part.strip()]
+        if len(parts) >= 2:
+            candidate = parts[-1]
+            if not _is_generic_source_label(candidate):
+                return candidate
 
+    if "|" in title_text:
+        parts = [part.strip() for part in title_text.split("|") if part.strip()]
+        if len(parts) >= 2:
+            candidate = parts[-1]
+            if not _is_generic_source_label(candidate):
+                return candidate
 
-def _pull_eventbrite(token: str | None) -> list[dict[str, Any]]:
-    if not token:
-        return []
-
-    response = requests.get(
-        "https://www.eventbriteapi.com/v3/events/search/",
-        params={
-            "location.address": "Tempe,AZ",
-            "location.within": "10km",
-        },
-        headers={"Authorization": f"Bearer {token}"},
-        timeout=10,
-    )
-    response.raise_for_status()
-    payload = response.json()
-    return payload.get("events", [])
+    # Fallback to title itself for substring matching against risk area names.
+    if _is_generic_source_label(title_text):
+        return ""
+    return title_text
 
 
-def _pull_asu_localist() -> list[dict[str, Any]]:
-    try:
-        response = requests.get(
-            "https://asu.edu/api/2/events",
-            params={"pp": 50, "days": 3},
-            timeout=10,
-        )
-        response.raise_for_status()
-        payload = response.json()
-        rows = payload.get("events", [])
-        normalized: list[dict[str, Any]] = []
-        for row in rows:
-            event = row.get("event", {})
-            if event:
-                normalized.append(event)
-        return normalized
-    except (requests.exceptions.ConnectionError, requests.exceptions.SSLError):
-        _log(f"[{datetime.now().strftime('%H:%M:%S')}] events ASU warning: could not reach ASU events endpoint, skipping")
-        return []
+def _find_risk_area_by_name(name: str, risk_areas: list[dict[str, Any]]) -> dict[str, Any] | None:
+    target = _normalize_text(name)
+    if not target:
+        return None
+
+    for row in risk_areas:
+        area_name = str(row.get("name") or "").strip()
+        area_normalized = _normalize_text(area_name)
+        if not area_normalized:
+            continue
+        if target in area_normalized or area_normalized in target:
+            return row
+
+    return None
+
+
+def _match_risk_area(venue_candidate: str, risk_areas: list[dict[str, Any]]) -> dict[str, Any] | None:
+    canonical_candidate = _canonicalize_candidate(venue_candidate)
+    candidate = _normalize_text(canonical_candidate)
+    if not candidate:
+        return None
+
+    for row in risk_areas:
+        area_name = str(row.get("name") or "").strip()
+        if not area_name:
+            continue
+        area_lower = _normalize_text(area_name)
+        if candidate in area_lower or area_lower in candidate:
+            return row
+    return None
+
+
+def _match_risk_area_from_text(title: str, text: str, risk_areas: list[dict[str, Any]]) -> dict[str, Any] | None:
+    haystack = _normalize_text(f"{title} {text}")
+
+    for alias, canonical in VENUE_ALIAS_TO_CANONICAL.items():
+        if _normalize_text(alias) in haystack:
+            matched = _find_risk_area_by_name(canonical, risk_areas)
+            if matched is not None:
+                return matched
+
+    for row in risk_areas:
+        area_name = _normalize_text(str(row.get("name") or "").strip())
+        if area_name and area_name in haystack:
+            return row
+    return None
+
+
+def _extract_date_string(value: str) -> str:
+    raw = (value or "").strip()
+    if not raw:
+        return "unknown-date"
+    return raw[:10]
 
 
 def fetch_events_data() -> list[dict[str, Any]]:
     load_dotenv(BASE_DIR.parent / ".env")
-    eventbrite_key = os.getenv("EVENTBRITE_API_KEY")
+    exa_api_key = os.getenv("EXA_API_KEY")
 
     try:
+        if not exa_api_key:
+            raise RuntimeError("EXA_API_KEY missing")
+
+        risk_areas = _load_risk_areas()
+        if not risk_areas:
+            raise RuntimeError("risk_areas_cache.json missing or empty")
+
+        exa = Exa(api_key=exa_api_key)
         merged: list[dict[str, Any]] = []
+        seen: set[tuple[str, str]] = set()
 
-        try:
-            eventbrite_rows = _pull_eventbrite(eventbrite_key)
-        except Exception as err:
-            _log(f"events Eventbrite warning: {err}")
-            eventbrite_rows = []
-
-        time.sleep(0.5)
-
-        for row in eventbrite_rows:
-            venue = row.get("venue") or {}
-            address = venue.get("address") or {}
-            name = (row.get("name") or {}).get("text") or "Unnamed Event"
-            event_type = _infer_event_type(name)
-            start_time = (row.get("start") or {}).get("utc") or datetime.utcnow().isoformat()
-            end_time = (row.get("end") or {}).get("utc") or start_time
-            lat = _parse_float(address.get("latitude") or venue.get("latitude"))
-            lng = _parse_float(address.get("longitude") or venue.get("longitude"))
-
-            merged.append(
-                _normalize_event(
-                    event_id=f"evtb_{row.get('id', 'unknown')}",
-                    name=name,
-                    event_type=event_type,
-                    lat=lat,
-                    lng=lng,
-                    start_time=start_time,
-                    end_time=end_time,
-                    venue_name=venue.get("name") or row.get("location", {}).get("name", ""),
-                    expected_crowd=None,
-                    simulated=False,
-                )
+        for query in EXA_QUERIES:
+            search_results = exa.search(
+                query,
+                type="auto",
+                num_results=5,
+                contents={"text": {"max_characters": 10000}}
             )
 
-        try:
-            localist_rows = _pull_asu_localist()
-        except Exception as err:
-            _log(f"events ASU Localist warning: {err}")
-            localist_rows = []
+            results_count = len(getattr(search_results, "results", []))
+            matched_count = 0
 
-        for row in localist_rows:
-            name = row.get("title") or "Unnamed ASU Event"
-            venue = row.get("venue") or {}
-            event_type = _infer_event_type(name)
-            start_time = row.get("first_date_occurrence") or datetime.utcnow().isoformat()
-            end_time = row.get("last_date_occurrence") or start_time
-            lat = _parse_float(venue.get("latitude"))
-            lng = _parse_float(venue.get("longitude"))
+            for row in getattr(search_results, "results", []):
+                title = str(_obj_get(row, "title") or "Unnamed Event")
+                url = str(_obj_get(row, "url") or "").strip()
+                if not url:
+                    continue
+                text = str(_obj_get(row, "text") or "")
+                start_time = str(_obj_get(row, "published_date") or datetime.now(UTC).isoformat())
+                event_type = _infer_event_type(f"{query} {title}")
 
-            merged.append(
-                _normalize_event(
-                    event_id=f"asu_{row.get('id', 'unknown')}",
-                    name=name,
-                    event_type=event_type,
-                    lat=lat,
-                    lng=lng,
-                    start_time=start_time,
-                    end_time=end_time,
-                    venue_name=row.get("location_name") or venue.get("name") or "",
-                    expected_crowd=None,
-                    simulated=False,
+                venue_candidate = _extract_venue_candidate(title, text)
+                matched_venue = _match_risk_area(venue_candidate, risk_areas)
+                if matched_venue is None:
+                    matched_venue = _match_risk_area_from_text(title, text, risk_areas)
+                if matched_venue is None:
+                    continue
+
+                venue_name = str(matched_venue.get("name") or "").strip()
+                if not venue_name:
+                    continue
+
+                date_string = _extract_date_string(start_time)
+                dedupe_key = (venue_name.lower(), date_string)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+
+                crowd = extract_crowd(text)
+                crowd_source = "extracted"
+                simulated = False
+
+                if crowd is None:
+                    crowd = _estimate_crowd(venue_name, event_type)
+                    crowd_source = "estimated"
+                    simulated = True
+
+                event_id = _event_id_from_url(url)
+
+                merged.append(
+                    Event(
+                        event_id=event_id,
+                        name=title,
+                        type=event_type,
+                        lat=_parse_float(matched_venue.get("lat")),
+                        lng=_parse_float(matched_venue.get("lng")),
+                        start_time=start_time,
+                        end_time=None,
+                        expected_crowd=crowd,
+                        crowd_source=crowd_source,
+                        _simulated=simulated,
+                    ).to_dict()
                 )
-            )
+                matched_count += 1
 
-        if not merged:
-            merged = [
-                _normalize_event(
-                    event_id=item["event_id"],
-                    name=item["name"],
-                    event_type=item["type"],
-                    lat=item["lat"],
-                    lng=item["lng"],
-                    start_time=item["start_time"],
-                    end_time=item["end_time"],
-                    venue_name=item["venue"],
-                    expected_crowd=None,
-                    simulated=True,
-                )
-                for item in FALLBACK_EVENTS
-            ]
+            _log(f"events query matched {matched_count}/{results_count} results")
 
         _write_cache(merged)
         _log(f"events updated: {len(merged)} records")
@@ -278,23 +387,7 @@ def fetch_events_data() -> list[dict[str, Any]]:
         _log(f"events error: {err}")
         if cached is not None:
             return cached
-        fallback = [
-            _normalize_event(
-                event_id=item["event_id"],
-                name=item["name"],
-                event_type=item["type"],
-                lat=item["lat"],
-                lng=item["lng"],
-                start_time=item["start_time"],
-                end_time=item["end_time"],
-                venue_name=item["venue"],
-                expected_crowd=None,
-                simulated=True,
-            )
-            for item in FALLBACK_EVENTS
-        ]
-        _write_cache(fallback)
-        return fallback
+        return []
 
 
 if __name__ == "__main__":

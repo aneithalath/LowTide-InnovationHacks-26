@@ -103,58 +103,11 @@ def _extract_rows(payload: Any) -> list[dict[str, Any]]:
 
 
 def fetch_cameras() -> list[dict[str, Any]]:
-    try:
-
-        response = requests.get("https://az511.com/api/v2/get/camera", headers=pythonheaders, timeout=10)
-        if response.status_code != 200:
-            _log(f"[{datetime.now().strftime('%H:%M:%S')}] az511 warning: endpoint returned {response.status_code}, using fallback")
-            raise Exception("AZ511 non-200")
-        rows = _extract_rows(response.json())
-
-        cameras: list[dict[str, Any]] = []
-        for row in rows:
-            lat = _coerce_float(row.get("lat") or row.get("latitude") or row.get("Latitude"))
-            lng = _coerce_float(
-                row.get("lon") or row.get("lng") or row.get("longitude") or row.get("Longitude")
-            )
-            if lat is None or lng is None:
-                continue
-            if not _inside_tempe(lat, lng):
-                continue
-
-            cam_id = row.get("id") or row.get("cameraId") or row.get("CameraId") or len(cameras)
-            label = row.get("name") or row.get("description") or row.get("location") or "AZ511 Camera"
-            stream_url = row.get("imageUrl") or row.get("url") or row.get("image") or ""
-
-            cameras.append(
-                Camera(
-                    cam_id=f"az511_{cam_id}",
-                    lat=lat,
-                    lng=lng,
-                    label=str(label),
-                    stream_url=str(stream_url),
-                    type="snapshot",
-                    refresh_sec=60,
-                    live=False,
-                    _simulated=False,
-                ).to_dict()
-            )
-
-        if not cameras:
-            cameras = _fallback_records()
-
-        _write_cache(cameras)
-        _log(f"cameras updated: {len(cameras)} records")
-        return cameras
-
-    except Exception as err:
-        cached = _load_cache()
-        _log(f"cameras error: {err}")
-        if cached is not None:
-            return cached
-        fallback = _fallback_records()
-        _write_cache(fallback)
-        return fallback
+    # AZ511 logic removed: always use fallback cameras only.
+    cameras = _fallback_records()
+    _write_cache(cameras)
+    _log(f"cameras updated: {len(cameras)} records (fallback only)")
+    return cameras
 
 
 if __name__ == "__main__":

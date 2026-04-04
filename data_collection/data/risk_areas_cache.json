@@ -310,5 +310,53 @@
     "current_status": "normal",
     "_simulated": false,
     "record_type": "riskarea"
+  },
+  {
+    "id": "manual_desert_financial_arena",
+    "type": "arena",
+    "name": "Desert Financial Arena",
+    "lat": 33.4166,
+    "lng": -111.9336,
+    "capacity": 14198,
+    "crowd_modifier": 1.0,
+    "current_status": "normal",
+    "_simulated": true,
+    "record_type": "riskarea"
+  },
+  {
+    "id": "manual_sun_devil_stadium",
+    "type": "stadium",
+    "name": "Sun Devil Stadium",
+    "lat": 33.4269,
+    "lng": -111.9327,
+    "capacity": 53599,
+    "crowd_modifier": 1.0,
+    "current_status": "normal",
+    "_simulated": true,
+    "record_type": "riskarea"
+  },
+  {
+    "id": "manual_downtown_tempe",
+    "type": "district",
+    "name": "Downtown Tempe",
+    "lat": 33.4265,
+    "lng": -111.94,
+    "capacity": 10000,
+    "crowd_modifier": 1.0,
+    "current_status": "normal",
+    "_simulated": true,
+    "record_type": "riskarea"
+  },
+  {
+    "id": "manual_eventbrite_platform",
+    "type": "platform",
+    "name": "Eventbrite Platform",
+    "lat": 33.4255,
+    "lng": -111.94,
+    "capacity": 5000,
+    "crowd_modifier": 1.0,
+    "current_status": "normal",
+    "_simulated": true,
+    "record_type": "riskarea"
   }
 ]

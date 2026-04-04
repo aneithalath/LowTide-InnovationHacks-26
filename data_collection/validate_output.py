@@ -7,6 +7,7 @@ from typing import Any
 
 BASE_DIR = Path(__file__).resolve().parent
 WORLD_STATE_PATH = BASE_DIR / "data" / "world_state.json"
+GEMINI_TRIGGER_PATH = BASE_DIR / "data" / "gemini_trigger.json"
 REQUIRED_KEYS = [
     "incidents",
     "weather",
@@ -157,6 +158,33 @@ def validate() -> int:
             state.pass_line(f"last_updated: {int(age.total_seconds())} seconds ago")
         else:
             state.fail_line(f"last_updated too old: {int(age.total_seconds())} seconds ago")
+
+    if GEMINI_TRIGGER_PATH.exists():
+        try:
+            with GEMINI_TRIGGER_PATH.open("r", encoding="utf-8") as handle:
+                trigger_payload = json.load(handle)
+            severity_tier = trigger_payload.get("severity_tier")
+            triggered_at = trigger_payload.get("triggered_at")
+            evaluated_at = trigger_payload.get("evaluated_at") or triggered_at
+            triggered = bool(trigger_payload.get("triggered", False))
+            print(
+                f"[INFO] gemini_trigger: triggered={triggered}, "
+                f"severity_tier={severity_tier}, evaluated_at={evaluated_at}, triggered_at={triggered_at}"
+            )
+
+            parsed_eval = _parse_iso(str(evaluated_at)) if evaluated_at else None
+            if parsed_eval is None:
+                state.warn_line("gemini_trigger evaluated_at missing or invalid")
+            else:
+                eval_age = datetime.now(timezone.utc) - parsed_eval
+                if eval_age <= timedelta(minutes=3):
+                    state.pass_line(f"gemini_trigger freshness: {int(eval_age.total_seconds())} seconds ago")
+                else:
+                    state.warn_line(
+                        f"gemini_trigger freshness appears stale: {int(eval_age.total_seconds())} seconds ago"
+                    )
+        except Exception as err:
+            print(f"[INFO] gemini_trigger: unreadable ({err})")
 
     print("--------------------------------------------------")
     if state.total_records > 0:

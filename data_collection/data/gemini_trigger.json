@@ -1,0 +1,17 @@
+{
+  "evaluated_at": "2026-04-04T22:24:28.666049+00:00",
+  "triggered": false,
+  "ready_to_send_gemini": false,
+  "status": "no trigger conditions met",
+  "severity_tier": "none",
+  "reasons": [],
+  "world_state_snapshot_path": "data/world_state.json",
+  "consumed": false,
+  "last_triggered_at": "2026-04-04T22:07:31.768065+00:00",
+  "last_trigger_tier": "critical",
+  "reason_counts": {
+    "critical": 0,
+    "high": 0,
+    "moderate": 0
+  }
+}

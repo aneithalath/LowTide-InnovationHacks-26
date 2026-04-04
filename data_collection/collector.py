@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from cameras_data import fetch_cameras
 from citizen_data import fetch_citizen_incidents, normalize_incident
 from events_data import fetch_events_data
+from gemini_trigger import evaluate_trigger
 from historical_data import fetch_historical_cells
 from risk_areas_data import fetch_risk_areas
 from traffic_data import fetch_traffic_data
@@ -141,13 +142,22 @@ def _job_units() -> None:
         _log(f"units job error: {err}")
 
 
+def _job_gemini_trigger() -> None:
+    try:
+        fired = evaluate_trigger()
+        if not fired:
+            _log("gemini trigger: no trigger conditions met")
+    except Exception as err:
+        _log(f"gemini trigger job error: {err}")
+
+
 def _print_key_status() -> None:
     load_dotenv(BASE_DIR.parent / ".env")
 
     keys = {
         "OPENWEATHER_API_KEY": bool(os.getenv("OPENWEATHER_API_KEY")),
         "TOMTOM_API_KEY": bool(os.getenv("TOMTOM_API_KEY")),
-        "EVENTBRITE_API_KEY": bool(os.getenv("EVENTBRITE_API_KEY")),
+        "EXA_API_KEY": bool(os.getenv("EXA_API_KEY")),
         "NWS_USER_AGENT": bool(os.getenv("NWS_USER_AGENT")),
     }
 
@@ -157,8 +167,8 @@ def _print_key_status() -> None:
         _log(f"  {key}: {status}")
 
     weather_mode = "real weather + NWS alerts" if keys["OPENWEATHER_API_KEY"] else "simulated baseline + NWS alerts"
-    traffic_mode = "real TomTom flow + AZ511 closures" if keys["TOMTOM_API_KEY"] else "simulated congestion + AZ511 closures"
-    events_mode = "Eventbrite + ASU Localist" if keys["EVENTBRITE_API_KEY"] else "ASU Localist only"
+    traffic_mode = "real TomTom flow" if keys["TOMTOM_API_KEY"] else "simulated congestion"
+    events_mode = "Exa web search" if keys["EXA_API_KEY"] else "cache-only (EXA_API_KEY missing)"
     nws_mode = "NWS alerts enabled" if keys["NWS_USER_AGENT"] else "NWS alerts with default user agent"
 
     _log(f"weather source mode: {weather_mode}")
@@ -173,8 +183,8 @@ def _startup_bootstrap() -> None:
     _job_incidents()
     _job_weather()
     _job_traffic()
-    _job_events()
     _job_risk_areas()
+    _job_events()
 
     try:
         cameras = fetch_cameras()
@@ -194,16 +204,19 @@ def _startup_bootstrap() -> None:
     except Exception as err:
         _log(f"units startup error: {err}")
 
+    _job_gemini_trigger()
+
 
 def _configure_scheduler() -> BlockingScheduler:
     scheduler = BlockingScheduler()
 
     scheduler.add_job(_job_incidents, "interval", minutes=2, id="incidents", max_instances=1, coalesce=True)
     scheduler.add_job(_job_weather, "interval", minutes=5, id="weather", max_instances=1, coalesce=True)
-    scheduler.add_job(_job_traffic, "interval", minutes=2, id="traffic", max_instances=1, coalesce=True)
+    scheduler.add_job(_job_traffic, "interval", minutes=10, id="traffic", max_instances=1, coalesce=True)
     scheduler.add_job(_job_events, "interval", minutes=60, id="events", max_instances=1, coalesce=True)
     scheduler.add_job(_job_risk_areas, "interval", hours=24, id="risk_areas", max_instances=1, coalesce=True)
     scheduler.add_job(_job_units, "interval", seconds=30, id="units", max_instances=1, coalesce=True)
+    scheduler.add_job(_job_gemini_trigger, "interval", seconds=60, id="gemini_trigger", max_instances=1, coalesce=True)
 
     return scheduler
 

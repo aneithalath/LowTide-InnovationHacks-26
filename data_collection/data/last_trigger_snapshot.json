@@ -1,0 +1,94 @@
+{
+  "captured_at": "2026-04-04T22:24:28.666049+00:00",
+  "incident_ids": [
+    "-OpBJybsnCD9wGuhjyml",
+    "-OpBKLwirHz0Za30Y8C4",
+    "-OpBQBOoCI3xOVkmOmx-",
+    "-OpBQtitIRIIgQ1v3Oy0",
+    "-OpBzT9JJVZzKaOMHpCi",
+    "-OpD54blMReUQnHabcfL",
+    "-OpEa9AbJoCD5WGsz1lI",
+    "-OpEgqMA6pso2NjhNYDc",
+    "-OpEwIC8cSE5fCzJvjvy",
+    "-OpF3dYx9Q9rOFmxycNO",
+    "-OpF9DOz8WpdvJIhVR8U",
+    "-OpFGgnoiKrLBEjKB8NK",
+    "-OpFRnHcX_057Yw3xjBp",
+    "-OpFbpLSvqGH8Ir0oRuU",
+    "-OpFmbQ1ecb8yEG5vjWJ",
+    "-OpFo5nOPAKBTd-dEpoX",
+    "-OpFp_mvR-OxfIB8K2X3",
+    "-OpGOSBQp0okvtJ2FkWq",
+    "-OpGXFw3_dO_RbrsQMIE",
+    "-OpH--fSA1KrYU-QRtaA",
+    "-OpH1HUdrY1TBWFFgUuE",
+    "-OpH2K7SZTcoelp_Qyg4",
+    "-OpHR_ErBzpFGZ4Zw6HC",
+    "-OpKVvrTEtIKoDJEgXTJ",
+    "-OpKWUZ0BvmjfdlDrcpK",
+    "-OpKsVYtMGgc08EtOSeA",
+    "-OpKzn4oKTQUIemhSHvE",
+    "-OpL9cP0j-kW91SqWSGY",
+    "-OpLIMYl2HVJnXzmu1Nm",
+    "-OpLQ6FDgp1vKuSTdmdu",
+    "-OpLWCgQwXPj163PZ3tf",
+    "-OpLnHsCc-x_b8cjNeZw",
+    "-OpLsamfmIBrsHNZ6vKi",
+    "-OpLvdeq4RiW8HClHzy_",
+    "-OpLwZiBLwhgSlmvJiDb",
+    "-OpM2-Ty3VDE3LLWq-KS",
+    "-OpMGp8ZSsOY7kAE45Xl",
+    "-OpMLMqe7FoZmx47BZlk",
+    "-OpMbK4gPAGdP5MPc9Ym",
+    "-OpNPFCjY0lYqHH_uAdW",
+    "-OpOjCHB5DgvvmDo1ESb",
+    "-OpOmittcvq6d7NGw1yh",
+    "-OpP8PX1vfsAH4CZSRXO",
+    "-OpPJ8IQNZ2QaDMzTJrk",
+    "-OpPK4f0CLGO5Nk9NMJX",
+    "-OpPPgSAgOsOtdjEjpg9",
+    "-OpPQg8SYzIupxd0_4IC",
+    "-OpPWfMjqbmxbgQ1Buxk",
+    "-OpPWmdhtae_MADmIQ5b",
+    "-OpPXL_w_OvB_9Asuo2O"
+  ],
+  "incident_count": 50,
+  "weather_alert_active": false,
+  "traffic_near_hotspots": {
+    "tomtom_mill_ave_university_dr": {
+      "score": 0.23,
+      "label": "Mill Ave / University Dr",
+      "hotspot": "Mill Ave Corridor"
+    },
+    "tomtom_apache_blvd_rural_rd": {
+      "score": 0.0,
+      "label": "Apache Blvd / Rural Rd",
+      "hotspot": "Tempe Marketplace"
+    },
+    "tomtom_broadway_rd_mcclintock_dr": {
+      "score": 0.3,
+      "label": "Broadway Rd / McClintock Dr",
+      "hotspot": "Tempe Marketplace"
+    },
+    "tomtom_tempe_town_lake_mill_ave": {
+      "score": 0.0,
+      "label": "Tempe Town Lake / Mill Ave",
+      "hotspot": "Mill Ave Corridor"
+    },
+    "tomtom_asu_campus_palm_walk": {
+      "score": 0.32,
+      "label": "ASU Campus / Palm Walk",
+      "hotspot": "Mill Ave Corridor"
+    },
+    "tomtom_rural_rd_rio_salado": {
+      "score": 0.0,
+      "label": "Rural Rd / Rio Salado",
+      "hotspot": "Mill Ave Corridor"
+    }
+  },
+  "dispatched_units": 0,
+  "high_event_keys": [],
+  "moderate_event_keys": [],
+  "last_trigger_at": "2026-04-04T22:07:31.768065+00:00",
+  "last_trigger_tier": "critical"
+}

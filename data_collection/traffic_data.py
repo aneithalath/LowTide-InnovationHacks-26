@@ -216,26 +216,7 @@ def fetch_traffic_data() -> list[dict[str, Any]]:
                 time.sleep(0.5)
 
 
-        try:
-            closures_response = requests.get(
-                "https://az511.com/api/v2/get/event",
-                headers=pythonheaders,
-                timeout=10
-            )
-            if closures_response.status_code != 200:
-                _log(f"[{datetime.now().strftime('%H:%M:%S')}] az511 warning: endpoint returned {closures_response.status_code}, using fallback")
-                raise Exception("AZ511 non-200")
-            closure_events = _parse_closure_rows(closures_response.json())
-            closure_idx = 0
-            for event in closure_events:
-                if not _is_maricopa(event):
-                    continue
-                if not _is_closed(event):
-                    continue
-                closure_idx += 1
-                segments.append(_closure_to_segment(event, closure_idx))
-        except Exception as err:
-            _log(f"traffic AZ511 warning: {err}")
+        # AZ511 logic removed: no closure ingestion, only TomTom and simulated data used.
 
         _write_cache(segments)
         _log(f"traffic updated: {len(segments)} records")
