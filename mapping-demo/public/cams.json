@@ -1,0 +1,38 @@
+[
+  {
+    "Name": "Trinity Presbyterian Church Bell Tower",
+    "Coordinates": [32.23148793580247, -110.96545899569693],
+    "StreamLink": "<iframe width=\"1035\" height=\"582\" src=\"https://www.youtube.com/embed/vyQp0uUDqcY\" title=\"TUCSON DOWNTOWN LIVE STREAM | 1️⃣ | 2024\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" referrerpolicy=\"strict-origin-when-cross-origin\" allowfullscreen></iframe>"
+  },
+  {
+    "Name": "Gould-Simpson (Science) Building",
+    "Coordinates": [32.229737687379476, -110.95504622716436],
+    "StreamLink": "<iframe width=\"1035\" height=\"582\" src=\"https://www.youtube.com/embed/4eh9E8hz40c\" title=\"Live Tucson, AZ Webcam - UArizona Computer Science Webcams\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" referrerpolicy=\"strict-origin-when-cross-origin\" allowfullscreen></iframe>"
+  },
+  {
+    "Name": "Hayden Ferry Lakeside",
+    "Coordinates": [33.431547502077365, -111.93974470515286],
+    "StreamLink": "https://api.wetmet.net/widgets/stream/frame.php?uid=724f4c75b95fbc55a0e72fd096f5cd9a"
+  }
+  ,
+  {
+    "Name": "State Farm Stadium",
+    "Coordinates": [33.53049376748427, -112.26428913945668],
+    "StreamLink": "https://api.wetmet.net/widgets/stream/frame.php?uid=9751d3e2378d7c84547b076018fb3a70"
+  },
+  {
+    "Name": "Mortgage Matchup Center",
+    "Coordinates": [33.44571906893305, -112.0712432190902],
+    "StreamLink": "https://api.wetmet.net/widgets/stream/frame.php?uid=cb84984026d7747244da7a381d0d7480"
+  },
+  {
+    "Name": "Hotel Monte Vista",
+    "Coordinates": [35.1982092186563, -111.64751129197835],
+    "StreamLink": "https://api.wetmet.net/widgets/stream/frame.php?uid=e1f43d2c0ee1817ba9a478551f226045"
+  },
+  {
+    "Name": "Kingman Railroad Museum",
+    "Coordinates": [35.18824777139068, -114.05220563983175],
+    "StreamLink": "<iframe width=\"1035\" height=\"582\" src=\"https://www.youtube.com/embed/h8-J3JGU7g4\" title=\"Kingman, AZ | BNSF Seligman Sub, MP 516.5 - PTZ (Chat) | SouthWest RailCams LIVE\" frameborder=\"0\" allow=\"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share\" referrerpolicy=\"strict-origin-when-cross-origin\" allowfullscreen></iframe>"
+  }
+]

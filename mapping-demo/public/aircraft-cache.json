@@ -1,0 +1,16 @@
+{
+  "fetchedAt": 1774844812352,
+  "bounds": {
+    "lowerLatitude": 33.26255041188364,
+    "lowerLongitude": -111.88734069030119,
+    "upperLatitude": 33.341174347899624,
+    "upperLongitude": -111.73554057757113
+  },
+  "feedStats": {
+    "totalStates": 0,
+    "statesWithCategory": 0,
+    "statesWithCoordinates": 0,
+    "plottedStates": 0
+  },
+  "aircraft": []
+}

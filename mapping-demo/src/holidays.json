@@ -1,0 +1,122 @@
+[
+  {
+    "holiday": "Maundy Thursday",
+    "religion": "Christian",
+    "date": "2026-04-02",
+    "description": "Commemorates the Last Supper of Jesus with his disciples."
+  },
+  {
+    "holiday": "Good Friday",
+    "religion": "Christian",
+    "date": "2026-04-03",
+    "description": "Observes the crucifixion of Jesus Christ."
+  },
+  {
+    "holiday": "Easter Sunday",
+    "religion": "Christian",
+    "date": "2026-04-05",
+    "description": "Celebrates the resurrection of Jesus from the dead."
+  },
+  {
+    "holiday": "Easter Monday",
+    "religion": "Christian",
+    "date": "2026-04-06",
+    "description": "Day following Easter, often observed with family gatherings."
+  },
+  {
+    "holiday": "St. George's Day",
+    "religion": "Christian",
+    "date": "2026-04-23",
+    "description": "Honors Saint George, patron saint of England."
+  },
+  {
+    "holiday": "None",
+    "religion": "Muslim",
+    "date": null,
+    "description": "No major holidays in April 2026; Ramadan ends in March."
+  },
+  {
+    "holiday": "Passover (Pesach)",
+    "religion": "Jewish",
+    "date": "2026-04-01 to 2026-04-09",
+    "description": "Commemorates the Exodus from Egypt; includes Seders."
+  },
+  {
+    "holiday": "Yom HaShoah",
+    "religion": "Jewish",
+    "date": "2026-04-13",
+    "description": "Holocaust Remembrance Day, honors victims of the Holocaust."
+  },
+  {
+    "holiday": "Yom HaAtzma'ut",
+    "religion": "Jewish",
+    "date": "2026-04-21",
+    "description": "Israel Independence Day, celebrates the founding of Israel."
+  },
+  {
+    "holiday": "Hanuman Jayanti",
+    "religion": "Hindu",
+    "date": "2026-04-02",
+    "description": "Celebrates the birth of Lord Hanuman, devotee of Rama."
+  },
+  {
+    "holiday": "Mesha Sankranti / Vaisakhi",
+    "religion": "Hindu",
+    "date": "2026-04-14",
+    "description": "Solar New Year; harvest festival in some regions."
+  },
+  {
+    "holiday": "Tamil New Year",
+    "religion": "Hindu",
+    "date": "2026-04-14",
+    "description": "Marks the Tamil New Year with family gatherings."
+  },
+  {
+    "holiday": "Akshaya Tritiya",
+    "religion": "Hindu",
+    "date": "2026-04-19",
+    "description": "Auspicious day for new beginnings, buying gold."
+  },
+  {
+    "holiday": "Theravada New Year / Songkran",
+    "religion": "Buddhist",
+    "date": "2026-04-13",
+    "description": "Traditional New Year in Theravada countries; water festival."
+  },
+  {
+    "holiday": "Vesak",
+    "religion": "Buddhist",
+    "date": "2026-04-30",
+    "description": "Celebrates Buddha's birth, enlightenment, and death."
+  },
+  {
+    "holiday": "Vaisakhi / Baisakhi",
+    "religion": "Sikh",
+    "date": "2026-04-13 to 2026-04-14",
+    "description": "Marks the founding of the Khalsa; harvest festival."
+  },
+  {
+    "holiday": "Birthday of Guru Angad Dev",
+    "religion": "Sikh",
+    "date": "2026-04-17",
+    "description": "Celebrates the second Sikh Guru's birth."
+  },
+  {
+    "holiday": "First Day of Ridván",
+    "religion": "Bahai",
+    "date": "2026-04-21",
+    "description": "Commemorates Bahá’u’lláh's declaration as God's messenger."
+  },
+  {
+    "holiday": "Ninth Day of Ridván",
+    "religion": "Bahai",
+    "date": "2026-04-29",
+    "description": "Family joins Bahá’u’lláh in the Garden of Ridván."
+  },
+  {
+    "holiday": "Twelfth Day of Ridván",
+    "religion": "Bahai",
+    "date": "2026-05-02",
+    "description": "Bahá’u’lláh leaves the Garden; end of the 12‑day festival."
+  }
+]
