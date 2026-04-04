@@ -1,0 +1,74 @@
+[
+  {
+    "cam_id": "sim_001",
+    "lat": 33.4192,
+    "lng": -111.934,
+    "label": "Mill Ave / University Dr",
+    "stream_url": "",
+    "type": "snapshot",
+    "refresh_sec": 60,
+    "live": false,
+    "_simulated": true,
+    "record_type": "camera"
+  },
+  {
+    "cam_id": "sim_002",
+    "lat": 33.415,
+    "lng": -111.9,
+    "label": "Apache Blvd / Rural Rd",
+    "stream_url": "",
+    "type": "snapshot",
+    "refresh_sec": 60,
+    "live": false,
+    "_simulated": true,
+    "record_type": "camera"
+  },
+  {
+    "cam_id": "sim_003",
+    "lat": 33.428,
+    "lng": -111.92,
+    "label": "Tempe Town Lake East",
+    "stream_url": "",
+    "type": "snapshot",
+    "refresh_sec": 60,
+    "live": false,
+    "_simulated": true,
+    "record_type": "camera"
+  },
+  {
+    "cam_id": "sim_004",
+    "lat": 33.4264,
+    "lng": -111.9325,
+    "label": "ASU Campus / Stadium",
+    "stream_url": "",
+    "type": "snapshot",
+    "refresh_sec": 60,
+    "live": false,
+    "_simulated": true,
+    "record_type": "camera"
+  },
+  {
+    "cam_id": "sim_005",
+    "lat": 33.405,
+    "lng": -111.91,
+    "label": "Broadway / McClintock",
+    "stream_url": "",
+    "type": "snapshot",
+    "refresh_sec": 60,
+    "live": false,
+    "_simulated": true,
+    "record_type": "camera"
+  },
+  {
+    "cam_id": "sim_006",
+    "lat": 33.38,
+    "lng": -111.93,
+    "label": "Southern Ave / Rural Rd",
+    "stream_url": "",
+    "type": "snapshot",
+    "refresh_sec": 60,
+    "live": false,
+    "_simulated": true,
+    "record_type": "camera"
+  }
+]

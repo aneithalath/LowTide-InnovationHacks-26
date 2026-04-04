@@ -1,0 +1,28 @@
+[
+  {
+    "event_id": "sim_evt_001",
+    "name": "Tempe Downtown Community Patrol Briefing",
+    "type": "community",
+    "lat": 33.4192,
+    "lng": -111.934,
+    "start_time": "2026-04-04T10:30:20.390310",
+    "end_time": "2026-04-04T10:30:20.390323",
+    "expected_crowd": 225,
+    "crowd_source": "estimated",
+    "_simulated": true,
+    "record_type": "event"
+  },
+  {
+    "event_id": "sim_evt_002",
+    "name": "ASU Weekend Sports Event",
+    "type": "sports",
+    "lat": 33.4264,
+    "lng": -111.9325,
+    "start_time": "2026-04-04T10:30:20.390327",
+    "end_time": "2026-04-04T10:30:20.390329",
+    "expected_crowd": 49311,
+    "crowd_source": "estimated",
+    "_simulated": true,
+    "record_type": "event"
+  }
+]

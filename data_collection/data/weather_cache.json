@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-04-04T10:40:49.515646+00:00",
+  "lat": 33.4255,
+  "lng": -111.94,
+  "temperature_f": 66.49,
+  "feels_like_f": 63.45,
+  "humidity_pct": 13,
+  "wind_speed_mph": 4.61,
+  "visibility_miles": 6.21,
+  "conditions": "few clouds",
+  "alert_type": null,
+  "alert_description": null,
+  "_simulated": false,
+  "record_type": "weathersnapshot"
+}
