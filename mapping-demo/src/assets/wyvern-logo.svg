@@ -1,0 +1,29 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wyvern-red" x1="256" y1="44" x2="256" y2="456" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF3A4A" />
+      <stop offset="1" stop-color="#990816" />
+    </linearGradient>
+  </defs>
+
+  <path
+    d="M256 44L212 120L170 140L148 220L182 280L214 300L228 346L256 382L284 346L298 300L330 280L364 220L342 140L300 120L256 44Z"
+    fill="url(#wyvern-red)"
+  />
+
+  <path d="M170 146L124 178L92 232L132 218L138 264L172 294L162 236L192 198L170 146Z" fill="#B90A1B" />
+  <path d="M342 146L388 178L420 232L380 218L374 264L340 294L350 236L320 198L342 146Z" fill="#B90A1B" />
+
+  <path d="M256 88L236 168V278L256 316L276 278V168L256 88Z" fill="#FFFFFF" />
+  <path d="M214 306L236 366L256 394L276 366L298 306L282 324L256 348L230 324L214 306Z" fill="#FFFFFF" />
+
+  <path d="M196 194L166 226L174 270L202 236L226 224L196 194Z" fill="#121212" fill-opacity="0.42" />
+  <path d="M316 194L346 226L338 270L310 236L286 224L316 194Z" fill="#121212" fill-opacity="0.42" />
+
+  <path
+    d="M256 44L212 120L170 140L148 220L182 280L214 300L228 346L256 382L284 346L298 300L330 280L364 220L342 140L300 120L256 44Z"
+    stroke="#FFFFFF"
+    stroke-width="10"
+    stroke-linejoin="round"
+  />
+</svg>

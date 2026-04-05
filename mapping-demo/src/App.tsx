@@ -9,6 +9,7 @@ import {
 import * as maptilersdk from '@maptiler/sdk'
 import Hls from 'hls.js'
 import '@maptiler/sdk/dist/maptiler-sdk.css'
+import wyvernLogo from './assets/wyvern.png'
 import './App.css'
 
 type IncidentUpdate = {
@@ -6361,11 +6362,16 @@ function App() {
 
         {isCommandSidebarOpen ? (
           <div className="terminal-sidebar__panel">
-          <div className="panel-heading">
-            <p>Command Layers</p>
-            <h1>Unit Tracking</h1>
+          <div className="wyvern-brand">
+            <img className="wyvern-brand__logo" src={wyvernLogo} alt="Wyvern insignia" />
+            <div className="panel-heading">
+              <p>Tactical Command</p>
+              <h1>Wyvern</h1>
+            </div>
           </div>
-          <p className="panel-subtext">Toggle live overlays and tactical instrumentation.</p>
+          <p className="panel-subtext">
+            Manage overlays, monitor threats, and coordinate response units.
+          </p>
 
           <div className="threat-sidebar-control">
             <button
@@ -6408,8 +6414,8 @@ function App() {
             ) : null}
           </div>
 
-          <div className="section-heading" onClick={() => setIsLayersSectionOpen(o => !o)} style={{ cursor: "pointer", marginTop: "1rem", borderBottom: "1px solid #333", paddingBottom: "4px" }}>
-            <h2 style={{ fontSize: "14px", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", color: "#ccc" }}>Layers {isLayersSectionOpen ? "[-]" : "[+]"}</h2>
+          <div className="section-heading" onClick={() => setIsLayersSectionOpen((o) => !o)}>
+            <h2 className="section-heading__title">Layers {isLayersSectionOpen ? '[-]' : '[+]'}</h2>
           </div>
 
           {isLayersSectionOpen && ( <>
@@ -6607,7 +6613,7 @@ function App() {
             <span className="legend-label">Risk Heatmap</span>
             <div className="risk-legend-bar" />
             <div className="pin-legend__religion">
-              Green = safer, yellow = medium risk, red = higher risk.
+              Lighter tones = safer, mid gray = medium risk, darker tones = higher risk.
             </div>
             <div className="pin-legend__religion">
               High risk: congregation + high traffic + level 1+ incident nearby.
@@ -6672,14 +6678,21 @@ function App() {
             </>
           )}
 
-          <div className="section-heading" onClick={() => setIsEmergencySectionOpen(o => !o)} style={{ cursor: "pointer", marginTop: "1rem", borderBottom: "1px solid #333", paddingBottom: "4px" }}>
-            <h2 style={{ fontSize: "14px", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", color: "#ccc" }}>Emergency Vehicles {isEmergencySectionOpen ? "[-]" : "[+]"}</h2>
+          <div className="section-heading" onClick={() => setIsEmergencySectionOpen((o) => !o)}>
+            <h2 className="section-heading__title">
+              Emergency Vehicles {isEmergencySectionOpen ? '[-]' : '[+]'}
+            </h2>
           </div>
           
           {isEmergencySectionOpen && (
             <div className="emergency-vehicles-section" style={{ marginTop: "0.5rem" }}>
               {emergencyVehicles.slice().sort((a,b) => a.vehicleType.localeCompare(b.vehicleType)).map(vehicle => {
-                const statusColor = vehicle.status === "patrolling" ? "green" : vehicle.status === "responding" ? "yellow" : "red";
+                const statusColor =
+                  vehicle.status === 'patrolling'
+                    ? '#f8f8f8'
+                    : vehicle.status === 'responding'
+                      ? '#bcbcbc'
+                      : '#7d7d7d';
                 const isExpanded = expandedControlVehicle === vehicle.key;
                 const isSelected = selectedEmergencyVehicleKey === vehicle.key
                 return (
@@ -6687,9 +6700,9 @@ function App() {
                     key={vehicle.key}
                     style={{
                       padding: "0.5rem",
-                      borderBottom: "1px dotted #333",
-                      borderLeft: isSelected ? "2px solid #2ad67d" : "2px solid transparent",
-                      backgroundColor: isSelected ? "rgba(42, 214, 125, 0.12)" : "transparent",
+                      borderBottom: "1px dotted #3f3f3f",
+                      borderLeft: isSelected ? "2px solid #d4d4d4" : "2px solid transparent",
+                      backgroundColor: isSelected ? "rgba(220, 220, 220, 0.12)" : "transparent",
                     }}
                   >
                     <div
@@ -6697,7 +6710,7 @@ function App() {
                         display: "flex",
                         alignItems: "center",
                         cursor: "pointer",
-                        color: isSelected ? "#2ad67d" : "#f2f4f8",
+                        color: isSelected ? "#ffffff" : "#f2f4f8",
                       }}
                       onClick={() => {
                         openEmergencyVehicle(vehicle.key)
@@ -6716,20 +6729,20 @@ function App() {
                             placeholder="Lat" 
                             value={dispatchFormState[vehicle.key]?.lat || ""} 
                             onChange={(e) => handleUpdateDispatchForm(vehicle.key, "lat", e.target.value)}
-                            style={{ flex: 1, minWidth: 0, backgroundColor: "#1e1e1e", color: "white", border: "1px solid #444", padding: "2px" }}
+                            style={{ flex: 1, minWidth: 0, backgroundColor: "#121212", color: "#ffffff", border: "1px solid #4c4c4c", padding: "2px" }}
                           />
                           <input 
                             type="text" 
                             placeholder="Lng" 
                             value={dispatchFormState[vehicle.key]?.lng || ""} 
                             onChange={(e) => handleUpdateDispatchForm(vehicle.key, "lng", e.target.value)}
-                            style={{ flex: 1, minWidth: 0, backgroundColor: "#1e1e1e", color: "white", border: "1px solid #444", padding: "2px" }}
+                            style={{ flex: 1, minWidth: 0, backgroundColor: "#121212", color: "#ffffff", border: "1px solid #4c4c4c", padding: "2px" }}
                           />
-                          <button onClick={(e) => { e.stopPropagation(); manuallyDispatchVehicle(vehicle.key); }} style={{ padding: "2px 6px", backgroundColor: "#333", color: "white", border: "1px solid #555" }}>Go</button>
+                          <button onClick={(e) => { e.stopPropagation(); manuallyDispatchVehicle(vehicle.key); }} style={{ padding: "2px 6px", backgroundColor: "#1a1a1a", color: "#fff", border: "1px solid #4f4f4f" }}>Go</button>
                         </div>
                         <div style={{ display: "flex", gap: "4px" }}>
-                          <button onClick={(e) => { e.stopPropagation(); manuallyStageVehicle(vehicle.key); }} style={{ padding: "4px", backgroundColor: "#333", color: "white", border: "1px solid #555", flex: 1 }}>Stage Here</button>
-                          <button onClick={(e) => { e.stopPropagation(); manuallyPatrolVehicle(vehicle.key); }} style={{ padding: "4px", backgroundColor: "#333", color: "white", border: "1px solid #555", flex: 1 }}>Patrol</button>
+                          <button onClick={(e) => { e.stopPropagation(); manuallyStageVehicle(vehicle.key); }} style={{ padding: "4px", backgroundColor: "#1a1a1a", color: "#fff", border: "1px solid #4f4f4f", flex: 1 }}>Stage Here</button>
+                          <button onClick={(e) => { e.stopPropagation(); manuallyPatrolVehicle(vehicle.key); }} style={{ padding: "4px", backgroundColor: "#1a1a1a", color: "#fff", border: "1px solid #4f4f4f", flex: 1 }}>Patrol</button>
                         </div>
                       </div>
                     )}
