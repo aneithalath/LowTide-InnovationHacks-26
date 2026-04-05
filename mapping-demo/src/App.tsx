@@ -34,9 +34,20 @@ type IncidentApiResponse = {
   results?: IncidentResult[]
 }
 
+type MitigationDispatchAssignment = {
+  vehicle_id: string
+  status: string
+}
+
+type MitigationDispatchPlan = {
+  action: string
+  assigned_units: MitigationDispatchAssignment[]
+}
+
 type PredictionApiResponse = {
   prediction_id: string
   timestamp: string
+  id?: string
   risk_assessment: {
     level: string
     coordinates: {
@@ -48,13 +59,9 @@ type PredictionApiResponse = {
     explanation: string
   }
   mitigation_strategy: {
-    police_dispatch: {
-      action: string
-      assigned_units: {
-        vehicle_id: string
-        status: string
-      }[]
-    }
+    police_dispatch: MitigationDispatchPlan
+    ems_dispatch: MitigationDispatchPlan
+    fire_dispatch: MitigationDispatchPlan
     medical_standby: {
       unit_id: string
       instruction: string
@@ -70,12 +77,19 @@ type PredictionApiResponse = {
   }
 }
 
+type ThreatActionDispatchTarget = {
+  latitude: number
+  longitude: number
+  locationLabel: string
+}
+
 type ThreatActionItem = {
   id: string
   label: string
   detail: string
-  kind: 'dispatch' | 'medical' | 'traffic'
+  kind: 'dispatch' | 'traffic'
   dispatchVehicleId?: string
+  dispatchTarget?: ThreatActionDispatchTarget
 }
 
 type ThreatActionStatus = 'idle' | 'active' | 'complete' | 'error'
@@ -335,6 +349,10 @@ type SelectedUnit =
       key: string
     }
   | {
+      kind: 'riskPrediction'
+      key: string
+    }
+  | {
       kind: 'congregation'
       key: string
     }
@@ -396,6 +414,23 @@ type RiskHeatmapFeatureCollection = {
   features: RiskHeatmapFeature[]
 }
 
+type ThreatRegionFeature = {
+  type: 'Feature'
+  geometry: {
+    type: 'Polygon'
+    coordinates: number[][][]
+  }
+  properties: {
+    threatLevel: string
+    radiusMeters: number
+  }
+}
+
+type ThreatRegionFeatureCollection = {
+  type: 'FeatureCollection'
+  features: ThreatRegionFeature[]
+}
+
 type TomTomFlowSegmentResponse = {
   flowSegmentData?: {
     currentSpeed?: number
@@ -422,6 +457,9 @@ const TOMTOM_TRAFFIC_FLOW_TILE_TEMPLATE = `https://api.tomtom.com/traffic/map/4/
 const RISK_HEATMAP_SOURCE_ID = 'risk-heatmap-grid-source'
 const RISK_HEATMAP_FILL_LAYER_ID = 'risk-heatmap-grid-fill-layer'
 const RISK_HEATMAP_OUTLINE_LAYER_ID = 'risk-heatmap-grid-outline-layer'
+const HIGH_THREAT_REGION_SOURCE_ID = 'high-threat-region-source'
+const HIGH_THREAT_REGION_FILL_LAYER_ID = 'high-threat-region-fill-layer'
+const HIGH_THREAT_REGION_OUTLINE_LAYER_ID = 'high-threat-region-outline-layer'
 const RISK_HEATMAP_TRAFFIC_TTL_MS = 120_000
 const RISK_HEATMAP_TRAFFIC_QUANTIZATION_DEGREES = 0.004
 const RISK_HEATMAP_TRAFFIC_CACHE_LIMIT = 280
@@ -464,63 +502,18 @@ const KNOTS_PER_METER_PER_SECOND = 1.943844
 const FEET_PER_METER = 3.28084
 const METERS_PER_MILE = 1_609.344
 const METERS_PER_DEGREE_LATITUDE = 111_320
-const RISK_PREDICTION_API =
-  import.meta.env.VITE_RISK_PREDICTION_API ?? 'http://127.0.0.1:8000/prediction'
+const RISK_PREDICTION_API = 'http://127.0.0.1:8000/prediction'
 const EMPTY_ROTORCRAFT_FEED_STATS: RotorcraftFeedStats = {
   totalStates: 0,
   statesWithCategory: 0,
   statesWithCoordinates: 0,
   plottedStates: 0,
 }
-const DEFAULT_RISK_PREDICTION: PredictionApiResponse = {
-  prediction_id: 'risk-analysis-2026-04-04-8832',
-  timestamp: '2026-04-04T13:25:00Z',
-  risk_assessment: {
-    level: 'High',
-    coordinates: {
-      latitude: 33.4255,
-      longitude: -111.94,
-    },
-    location_name: 'Mill Avenue & University Drive',
-    risk_factors: [
-      'Heavy congestion following a stadium event',
-      'Historical data indicating high pedestrian-vehicle conflict at this hour',
-      'Recent social media reports of an unsanctioned street gathering nearby',
-    ],
-    explanation:
-      "A high-risk event is predicted due to the convergence of 'after-stadium' foot traffic and peak-hour vehicle congestion. The risk is compounded by recent citizen incident reports of aggressive driving in the immediate vicinity and a scheduled large-scale street festival nearby that has exceeded its planned capacity, creating a high probability of crowd crush or pedestrian-involved collisions.",
-  },
-  mitigation_strategy: {
-    police_dispatch: {
-      action: 'Deploy for traffic calming and crowd monitoring',
-      assigned_units: [
-        {
-          vehicle_id: 'P-104',
-          status: 'En route',
-        },
-        {
-          vehicle_id: 'P-212',
-          status: 'En route',
-        },
-      ],
-    },
-    medical_standby: {
-      unit_id: 'AMB-09',
-      instruction: 'Pre-notification',
-      message:
-        'Potential high-density incident at Mill & University. No immediate dispatch required; remain on standby at Station 4 for rapid response if situation escalates.',
-      standby_location: {
-        latitude: 33.422,
-        longitude: -111.935,
-      },
-    },
-    traffic_control: {
-      're-routing':
-        'Automated signal timing adjustment implemented for Northbound traffic to reduce pedestrian dwell time.',
-    },
-  },
-}
 const EMPTY_RISK_HEATMAP_FEATURE_COLLECTION: RiskHeatmapFeatureCollection = {
+  type: 'FeatureCollection',
+  features: [],
+}
+const EMPTY_HIGH_THREAT_REGION_FEATURE_COLLECTION: ThreatRegionFeatureCollection = {
   type: 'FeatureCollection',
   features: [],
 }
@@ -821,6 +814,83 @@ const levelLabel = (level: number) => {
   }
 
   return 'LEVEL 1+'
+}
+
+const isHighRiskLevel = (level: string) => {
+  const normalizedLevel = level.trim().toLowerCase()
+  return normalizedLevel === 'high' || normalizedLevel === 'high risk'
+}
+
+const threatRadiusMetersFromLevel = (level: string) => {
+  const normalizedLevel = level.trim().toLowerCase()
+
+  if (normalizedLevel === 'high' || normalizedLevel === 'high risk') {
+    return 900
+  }
+
+  if (normalizedLevel === 'medium' || normalizedLevel === 'moderate') {
+    return 650
+  }
+
+  return 420
+}
+
+const buildThreatCircleRing = (
+  longitude: number,
+  latitude: number,
+  radiusMeters: number,
+  segmentCount = 72,
+) => {
+  const earthRadiusMeters = 6_371_000
+  const latitudeRadians = (latitude * Math.PI) / 180
+  const longitudeRadians = (longitude * Math.PI) / 180
+  const angularDistance = radiusMeters / earthRadiusMeters
+  const ring: number[][] = []
+
+  for (let step = 0; step <= segmentCount; step += 1) {
+    const bearing = (step / segmentCount) * (2 * Math.PI)
+    const targetLatitudeRadians = Math.asin(
+      Math.sin(latitudeRadians) * Math.cos(angularDistance) +
+        Math.cos(latitudeRadians) * Math.sin(angularDistance) * Math.cos(bearing),
+    )
+    const targetLongitudeRadians =
+      longitudeRadians +
+      Math.atan2(
+        Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitudeRadians),
+        Math.cos(angularDistance) -
+          Math.sin(latitudeRadians) * Math.sin(targetLatitudeRadians),
+      )
+    const targetLongitude = ((((targetLongitudeRadians * 180) / Math.PI) + 540) % 360) - 180
+    const targetLatitude = (targetLatitudeRadians * 180) / Math.PI
+
+    ring.push([targetLongitude, targetLatitude])
+  }
+
+  return ring
+}
+
+const buildHighThreatRegionCollection = (
+  prediction: PredictionApiResponse,
+): ThreatRegionFeatureCollection => {
+  const { latitude, longitude } = prediction.risk_assessment.coordinates
+  const radiusMeters = threatRadiusMetersFromLevel(prediction.risk_assessment.level)
+
+  return {
+    type: 'FeatureCollection',
+    features: [
+      {
+        type: 'Feature',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [buildThreatCircleRing(longitude, latitude, radiusMeters)],
+        },
+        properties: {
+          threatLevel: prediction.risk_assessment.level,
+          radiusMeters,
+        },
+      },
+    ],
+  }
 }
 
 const threatActionStatusLabel = (status: ThreatActionStatus) => {
@@ -2365,6 +2435,200 @@ const dedupeCongregationPlaces = (places: CongregationPlace[]) => {
 
 const toTrimmedString = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
 
+const normalizeUnitIdentifier = (value: string) =>
+  value
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+
+const parsePredictionApiResponse = (payload: unknown): PredictionApiResponse | null => {
+  if (!isObjectRecord(payload)) {
+    return null
+  }
+
+  const predictionSource = payload
+  const riskAssessmentSource = isObjectRecord(predictionSource.risk_assessment)
+    ? predictionSource.risk_assessment
+    : {}
+  const coordinatesSource = isObjectRecord(riskAssessmentSource.coordinates)
+    ? riskAssessmentSource.coordinates
+    : {}
+  const mitigationSource = isObjectRecord(predictionSource.mitigation_strategy)
+    ? predictionSource.mitigation_strategy
+    : {}
+  const policeDispatchSource = isObjectRecord(mitigationSource.police_dispatch)
+    ? mitigationSource.police_dispatch
+    : {}
+  const emsDispatchSource = isObjectRecord(mitigationSource.ems_dispatch)
+    ? mitigationSource.ems_dispatch
+    : {}
+  const fireDispatchSource = isObjectRecord(mitigationSource.fire_dispatch)
+    ? mitigationSource.fire_dispatch
+    : {}
+  const medicalStandbySource = isObjectRecord(mitigationSource.medical_standby)
+    ? mitigationSource.medical_standby
+    : {}
+  const standbyLocationSource = isObjectRecord(medicalStandbySource.standby_location)
+    ? medicalStandbySource.standby_location
+    : {}
+  const trafficControlSource = isObjectRecord(mitigationSource.traffic_control)
+    ? mitigationSource.traffic_control
+    : {}
+
+  const parsedRiskFactors = Array.isArray(riskAssessmentSource.risk_factors)
+    ? riskAssessmentSource.risk_factors
+        .map((riskFactor) => toTrimmedString(riskFactor))
+        .filter((riskFactor) => Boolean(riskFactor))
+    : []
+
+  const parseAssignedUnits = (assignedUnitsSource: unknown): MitigationDispatchAssignment[] =>
+    Array.isArray(assignedUnitsSource)
+      ? assignedUnitsSource
+          .map((assignedUnit) => {
+            if (!isObjectRecord(assignedUnit)) {
+              return null
+            }
+
+            const vehicleId =
+              toTrimmedString(assignedUnit.vehicle_id) || toTrimmedString(assignedUnit.unit_id)
+            const status = toTrimmedString(assignedUnit.status) || 'En route'
+
+            if (!vehicleId) {
+              return null
+            }
+
+            return {
+              vehicle_id: vehicleId,
+              status,
+            }
+          })
+          .filter((assignedUnit): assignedUnit is MitigationDispatchAssignment => assignedUnit !== null)
+      : []
+
+  const parseAssignedUnitIds = (unitIdsSource: unknown): MitigationDispatchAssignment[] =>
+    Array.isArray(unitIdsSource)
+      ? unitIdsSource
+          .map((unitId) => toTrimmedString(unitId))
+          .filter((unitId) => Boolean(unitId))
+          .map((unitId) => ({
+            vehicle_id: unitId,
+            status: 'En route',
+          }))
+      : []
+
+  const parsedPoliceAssignedUnitsFromDispatch = parseAssignedUnits(policeDispatchSource.assigned_units)
+  const parsedEmsAssignedUnitsFromDispatch = parseAssignedUnits(emsDispatchSource.assigned_units)
+  const parsedFireAssignedUnitsFromDispatch = parseAssignedUnits(fireDispatchSource.assigned_units)
+
+  const parsedPoliceAssignedUnits = parsedPoliceAssignedUnitsFromDispatch.length
+    ? parsedPoliceAssignedUnitsFromDispatch
+    : parseAssignedUnitIds(predictionSource.police_unit_ids)
+  const parsedEmsAssignedUnits = parsedEmsAssignedUnitsFromDispatch.length
+    ? parsedEmsAssignedUnitsFromDispatch
+    : parseAssignedUnitIds(predictionSource.ems_unit_ids)
+  const parsedFireAssignedUnits = parsedFireAssignedUnitsFromDispatch.length
+    ? parsedFireAssignedUnitsFromDispatch
+    : parseAssignedUnitIds(predictionSource.fire_unit_ids)
+
+  const coordinatesLatitude = toFiniteNumber(coordinatesSource.latitude)
+  const coordinatesLongitude = toFiniteNumber(coordinatesSource.longitude)
+  const standbyLatitude = toFiniteNumber(standbyLocationSource.latitude)
+  const standbyLongitude = toFiniteNumber(standbyLocationSource.longitude)
+
+  const predictionId =
+    toTrimmedString(predictionSource.prediction_id) || toTrimmedString(predictionSource.id)
+  const timestamp = toTrimmedString(predictionSource.timestamp)
+  const incidentId = toTrimmedString(predictionSource.id)
+  const level = toTrimmedString(riskAssessmentSource.level)
+  const locationName = toTrimmedString(riskAssessmentSource.location_name)
+  const explanation = toTrimmedString(riskAssessmentSource.explanation)
+  const policeAction = toTrimmedString(policeDispatchSource.action)
+  const emsAction =
+    toTrimmedString(emsDispatchSource.action) ||
+    'Dispatch nearest ambulances to the risk area and stage on arrival.'
+  const fireAction =
+    toTrimmedString(fireDispatchSource.action) ||
+    'Dispatch nearest firetrucks to the risk area and stage for hazard support.'
+  const standbyUnitId = toTrimmedString(medicalStandbySource.unit_id)
+  const standbyInstruction = toTrimmedString(medicalStandbySource.instruction)
+  const standbyMessage = toTrimmedString(medicalStandbySource.message)
+  const trafficRerouting = toTrimmedString(trafficControlSource['re-routing'])
+
+  if (
+    !predictionId ||
+    !timestamp ||
+    !incidentId ||
+    !level ||
+    !locationName ||
+    !explanation ||
+    !policeAction ||
+    !standbyUnitId ||
+    !standbyInstruction ||
+    !standbyMessage ||
+    !trafficRerouting ||
+    !parsedRiskFactors.length ||
+    coordinatesLatitude === null ||
+    coordinatesLongitude === null ||
+    standbyLatitude === null ||
+    standbyLongitude === null
+  ) {
+    return null
+  }
+
+  return {
+    prediction_id: predictionId,
+    timestamp,
+    id: incidentId,
+    risk_assessment: {
+      level,
+      coordinates: {
+        latitude: coordinatesLatitude,
+        longitude: coordinatesLongitude,
+      },
+      location_name: locationName,
+      risk_factors: parsedRiskFactors,
+      explanation,
+    },
+    mitigation_strategy: {
+      police_dispatch: {
+        action: policeAction,
+        assigned_units: parsedPoliceAssignedUnits,
+      },
+      ems_dispatch: {
+        action: emsAction,
+        assigned_units: parsedEmsAssignedUnits,
+      },
+      fire_dispatch: {
+        action: fireAction,
+        assigned_units: parsedFireAssignedUnits,
+      },
+      medical_standby: {
+        unit_id: standbyUnitId,
+        instruction: standbyInstruction,
+        message: standbyMessage,
+        standby_location: {
+          latitude: standbyLatitude,
+          longitude: standbyLongitude,
+        },
+      },
+      traffic_control: {
+        're-routing': trafficRerouting,
+      },
+    },
+  }
+}
+
+const parsePredictionApiResponses = (payload: unknown): PredictionApiResponse[] => {
+  const predictionPayloads = Array.isArray(payload) ? payload : [payload]
+
+  return predictionPayloads
+    .map((entry) => parsePredictionApiResponse(entry))
+    .filter((entry): entry is PredictionApiResponse => entry !== null)
+}
+
 const parseEmergencyFleetPayload = (payload: unknown): EmergencyFleetSnapshot | null => {
   if (!payload || typeof payload !== 'object') {
     return null
@@ -3202,6 +3466,40 @@ const ensureRiskHeatmapLayer = (map: maptilersdk.Map) => {
   }
 }
 
+const ensureHighThreatRegionLayer = (map: maptilersdk.Map) => {
+  if (!map.getSource(HIGH_THREAT_REGION_SOURCE_ID)) {
+    map.addSource(HIGH_THREAT_REGION_SOURCE_ID, {
+      type: 'geojson',
+      data: EMPTY_HIGH_THREAT_REGION_FEATURE_COLLECTION,
+    })
+  }
+
+  if (!map.getLayer(HIGH_THREAT_REGION_FILL_LAYER_ID)) {
+    map.addLayer({
+      id: HIGH_THREAT_REGION_FILL_LAYER_ID,
+      type: 'fill',
+      source: HIGH_THREAT_REGION_SOURCE_ID,
+      paint: {
+        'fill-color': '#ff2f2f',
+        'fill-opacity': 0.2,
+      },
+    })
+  }
+
+  if (!map.getLayer(HIGH_THREAT_REGION_OUTLINE_LAYER_ID)) {
+    map.addLayer({
+      id: HIGH_THREAT_REGION_OUTLINE_LAYER_ID,
+      type: 'line',
+      source: HIGH_THREAT_REGION_SOURCE_ID,
+      paint: {
+        'line-color': '#ff6d6d',
+        'line-width': 2.2,
+        'line-opacity': 0.95,
+      },
+    })
+  }
+}
+
 function App() {
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const unitWidgetRef = useRef<HTMLElement | null>(null)
@@ -3224,6 +3522,7 @@ function App() {
   const cctvFetchControllerRef = useRef<AbortController | null>(null)
   const rotorcraftFetchControllerRef = useRef<AbortController | null>(null)
   const riskHeatmapFetchControllerRef = useRef<AbortController | null>(null)
+  const threatActionItemsRef = useRef<ThreatActionItem[]>([])
   const congregationCacheInitPromiseRef = useRef<Promise<void> | null>(null)
   const aircraftCacheInitPromiseRef = useRef<Promise<void> | null>(null)
   const aircraftCacheSnapshotRef = useRef<AircraftCacheSnapshot | null>(null)
@@ -3249,10 +3548,10 @@ function App() {
   const [selectedUnit, setSelectedUnit] = useState<SelectedUnit | null>(null)
   const [isCommandSidebarOpen, setIsCommandSidebarOpen] = useState(true)
   const [isIncidentsPanelOpen, setIsIncidentsPanelOpen] = useState(true)
-  const [isThreatMenuOpen, setIsThreatMenuOpen] = useState(false)
-  const [riskPrediction, setRiskPrediction] =
-    useState<PredictionApiResponse>(DEFAULT_RISK_PREDICTION)
+  const [isThreatPanelOpen, setIsThreatPanelOpen] = useState(false)
+  const [riskPredictions, setRiskPredictions] = useState<PredictionApiResponse[]>([])
   const [riskPredictionError, setRiskPredictionError] = useState('')
+  const [riskPredictionNotice, setRiskPredictionNotice] = useState('')
   const [threatActionStatusById, setThreatActionStatusById] = useState<
     Record<string, ThreatActionStatus>
   >({})
@@ -3430,6 +3729,12 @@ function App() {
   const selectedCctvKey = selectedUnit?.kind === 'cctv' ? selectedUnit.key : ''
   const selectedEmergencyVehicleKey = selectedUnit?.kind === 'emergencyVehicle' ? selectedUnit.key : ''
   const selectedAircraftKey = selectedUnit?.kind === 'aircraft' ? selectedUnit.key : ''
+  const selectedRiskPredictionKey = selectedUnit?.kind === 'riskPrediction' ? selectedUnit.key : ''
+  const highRiskPredictions = useMemo(
+    () => riskPredictions.filter((prediction) => isHighRiskLevel(prediction.risk_assessment.level)),
+    [riskPredictions],
+  )
+  const hasHighRiskPredictions = highRiskPredictions.length > 0
 
   const selectedIncident = useMemo(() => {
     if (selectedUnit?.kind !== 'incident') {
@@ -3438,6 +3743,14 @@ function App() {
 
     return incidents.find((incident) => incident.key === selectedUnit.key) ?? null
   }, [incidents, selectedUnit])
+
+  const selectedRiskPrediction = useMemo(() => {
+    if (selectedUnit?.kind !== 'riskPrediction') {
+      return null
+    }
+
+    return highRiskPredictions.find((prediction) => prediction.prediction_id === selectedUnit.key) ?? null
+  }, [highRiskPredictions, selectedUnit])
 
   const selectedCongregation = useMemo(() => {
     if (selectedUnit?.kind !== 'congregation') {
@@ -3497,39 +3810,95 @@ function App() {
   }, [selectedIncident])
 
   const threatActionItems = useMemo<ThreatActionItem[]>(() => {
-    const policeDispatch = riskPrediction.mitigation_strategy.police_dispatch
-    const medicalStandby = riskPrediction.mitigation_strategy.medical_standby
-    const dispatchActions = policeDispatch.assigned_units.map((unit) => {
-      const normalizedUnitId = unit.vehicle_id
+    if (!selectedRiskPrediction) {
+      return []
+    }
+
+    const predictionScope =
+      selectedRiskPrediction.prediction_id
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '')
+        .replace(/(^-|-$)/g, '') || 'prediction'
+    const policeDispatch = selectedRiskPrediction.mitigation_strategy.police_dispatch
+    const emsDispatch = selectedRiskPrediction.mitigation_strategy.ems_dispatch
+    const fireDispatch = selectedRiskPrediction.mitigation_strategy.fire_dispatch
+    const medicalStandby = selectedRiskPrediction.mitigation_strategy.medical_standby
+    const riskTarget: ThreatActionDispatchTarget = {
+      latitude: selectedRiskPrediction.risk_assessment.coordinates.latitude,
+      longitude: selectedRiskPrediction.risk_assessment.coordinates.longitude,
+      locationLabel: selectedRiskPrediction.risk_assessment.location_name,
+    }
+    const standbyTarget: ThreatActionDispatchTarget = {
+      latitude: medicalStandby.standby_location.latitude,
+      longitude: medicalStandby.standby_location.longitude,
+      locationLabel: `${selectedRiskPrediction.risk_assessment.location_name} standby`,
+    }
 
-      return {
-        id: `dispatch-${normalizedUnitId || 'unit'}`,
-        label: `Dispatch ${unit.vehicle_id}`,
-        detail: `${policeDispatch.action} � Feed status: ${unit.status}`,
-        kind: 'dispatch' as const,
-        dispatchVehicleId: unit.vehicle_id,
-      }
-    })
+    const buildDispatchActions = (
+      actionPrefix: string,
+      labelPrefix: string,
+      dispatchPlan: MitigationDispatchPlan,
+      dispatchTarget: ThreatActionDispatchTarget,
+    ) =>
+      dispatchPlan.assigned_units.map((unit) => {
+        const normalizedUnitId = unit.vehicle_id
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '')
+
+        return {
+          id: `${predictionScope}-${actionPrefix}-dispatch-${normalizedUnitId || 'unit'}`,
+          label: `${labelPrefix} ${unit.vehicle_id}`,
+          detail: `${dispatchPlan.action} | Feed status: ${unit.status} | Target: ${dispatchTarget.locationLabel}`,
+          kind: 'dispatch' as const,
+          dispatchVehicleId: unit.vehicle_id,
+          dispatchTarget,
+        }
+      })
+
+    const standbyUnitKey = medicalStandby.unit_id
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+    const standbyActionItem = medicalStandby.unit_id
+      ? [
+          {
+            id: `${predictionScope}-medical-standby-${standbyUnitKey || 'unit'}`,
+            label: `Stage Standby ${medicalStandby.unit_id}`,
+            detail: `${medicalStandby.message} | Target: ${standbyTarget.locationLabel}`,
+            kind: 'dispatch' as const,
+            dispatchVehicleId: medicalStandby.unit_id,
+            dispatchTarget: standbyTarget,
+          },
+        ]
+      : []
+
+    const policeDispatchActions = buildDispatchActions(
+      'police',
+      'Dispatch Patrol',
+      policeDispatch,
+      riskTarget,
+    )
+    const emsDispatchActions = buildDispatchActions('ems', 'Dispatch EMS', emsDispatch, riskTarget)
+    const fireDispatchActions = buildDispatchActions('fire', 'Dispatch Fire', fireDispatch, riskTarget)
 
     return [
-      ...dispatchActions,
+      ...policeDispatchActions,
+      ...emsDispatchActions,
+      ...fireDispatchActions,
+      ...standbyActionItem,
       {
-        id: 'medical-standby',
-        label: 'Prepare Medical Standby',
-        detail: `${medicalStandby.unit_id} ${medicalStandby.instruction}`,
-        kind: 'medical',
-      },
-      {
-        id: 'traffic-reroute',
+        id: `${predictionScope}-traffic-reroute`,
         label: 'Apply Traffic Re-route',
-        detail: riskPrediction.mitigation_strategy.traffic_control['re-routing'],
+        detail: selectedRiskPrediction.mitigation_strategy.traffic_control['re-routing'],
         kind: 'traffic',
       },
     ]
-  }, [riskPrediction])
+  }, [selectedRiskPrediction])
+
+  useEffect(() => {
+    threatActionItemsRef.current = threatActionItems
+  }, [threatActionItems])
 
   useEffect(() => {
     setThreatActionStatusById((current) => {
@@ -3656,6 +4025,14 @@ function App() {
     })
   }, [])
 
+  const openRiskPrediction = useCallback((predictionId: string) => {
+    setIsUnitWidgetDismissed(false)
+    setSelectedUnit({
+      kind: 'riskPrediction',
+      key: predictionId,
+    })
+  }, [])
+
   const openCongregation = useCallback((placeKey: string) => {
     setIsUnitWidgetDismissed(false)
     setSelectedUnit({
@@ -3691,8 +4068,9 @@ function App() {
   const syncThreatDispatchStatuses = useCallback(() => {
     setThreatActionStatusById((current) => {
       const nextStatusById = { ...current }
+      const activeThreatActionItems = threatActionItemsRef.current
 
-      threatActionItems.forEach((actionItem) => {
+      activeThreatActionItems.forEach((actionItem) => {
         if (actionItem.kind === 'dispatch') {
           nextStatusById[actionItem.id] = 'idle'
         }
@@ -3710,11 +4088,15 @@ function App() {
 
       return nextStatusById
     })
-  }, [threatActionItems])
+  }, [])
 
-  const dispatchEmergencyUnitToRisk = useCallback(
+  const dispatchEmergencyUnitToTarget = useCallback(
     async (actionItem: ThreatActionItem) => {
-      if (actionItem.kind !== 'dispatch' || !actionItem.dispatchVehicleId) {
+      if (
+        actionItem.kind !== 'dispatch' ||
+        !actionItem.dispatchVehicleId ||
+        !actionItem.dispatchTarget
+      ) {
         return
       }
 
@@ -3723,9 +4105,9 @@ function App() {
         [actionItem.id]: 'active',
       }))
 
+      const dispatchUnitKey = normalizeUnitIdentifier(actionItem.dispatchVehicleId || '')
       const runtime = emergencyVehicleRuntimeRef.current.find(
-        (candidate) =>
-          candidate.unitCode.toLowerCase() === actionItem.dispatchVehicleId?.toLowerCase(),
+        (candidate) => normalizeUnitIdentifier(candidate.unitCode) === dispatchUnitKey,
       )
 
       if (!runtime) {
@@ -3753,14 +4135,14 @@ function App() {
               longitude: currentPosition.longitude,
             },
             target: {
-              latitude: riskPrediction.risk_assessment.coordinates.latitude,
-              longitude: riskPrediction.risk_assessment.coordinates.longitude,
+              latitude: actionItem.dispatchTarget.latitude,
+              longitude: actionItem.dispatchTarget.longitude,
             },
           }),
         })
 
         if (!routeResponse.ok) {
-          throw new Error('Unable to route emergency unit to risk zone.')
+          throw new Error('Unable to route emergency unit to dispatch target.')
         }
 
         const routePayload = (await routeResponse.json()) as RoadRouteApiResponse
@@ -3794,7 +4176,7 @@ function App() {
 
         runtime.dispatchRoute = dispatchRoute
         runtime.dispatchDistanceMeters = 0
-        runtime.dispatchTargetLabel = riskPrediction.risk_assessment.location_name
+        runtime.dispatchTargetLabel = actionItem.dispatchTarget.locationLabel
         runtime.dispatchActionId = actionItem.id
         runtime.isStationedAtDispatchTarget = false
         runtime.returnToPatrolDistanceMeters = null
@@ -3819,18 +4201,22 @@ function App() {
         }))
       }
     },
-    [riskPrediction, syncThreatDispatchStatuses],
+    [syncThreatDispatchStatuses],
   )
 
   const handleThreatActionPress = useCallback(
     (actionItem: ThreatActionItem) => {
-      if (actionItem.kind !== 'dispatch') {
+      if (actionItem.kind === 'dispatch') {
+        void dispatchEmergencyUnitToTarget(actionItem)
         return
       }
 
-      void dispatchEmergencyUnitToRisk(actionItem)
+      setThreatActionStatusById((current) => ({
+        ...current,
+        [actionItem.id]: 'complete',
+      }))
     },
-    [dispatchEmergencyUnitToRisk],
+    [dispatchEmergencyUnitToTarget],
   )
 
   const closeUnitWidget = useCallback(() => {
@@ -3922,16 +4308,38 @@ function App() {
           throw new Error('Risk prediction API request failed.')
         }
 
-        const predictionResponse = (await response.json()) as PredictionApiResponse
-        setRiskPrediction(predictionResponse)
+        const predictionPayload = await response.json()
+        const predictionResponses = parsePredictionApiResponses(predictionPayload)
+        const highRiskPredictionCount = predictionResponses.filter((prediction) =>
+          isHighRiskLevel(prediction.risk_assessment.level),
+        ).length
+
+        if (!predictionResponses.length) {
+          setRiskPredictions([])
+          setRiskPredictionError('')
+          setRiskPredictionNotice('')
+          setIsThreatPanelOpen(false)
+          return
+        }
+
+        setRiskPredictions(predictionResponses)
         setRiskPredictionError('')
+        setRiskPredictionNotice(
+          highRiskPredictionCount > 0
+            ? `Prediction response received (${highRiskPredictionCount} high-risk notification${
+                highRiskPredictionCount === 1 ? '' : 's'
+              }).`
+            : 'Prediction response received with no active high-risk notifications.',
+        )
       } catch {
         if (fetchController.signal.aborted) {
           return
         }
 
-        setRiskPrediction(DEFAULT_RISK_PREDICTION)
-        setRiskPredictionError('Risk API unavailable. Showing fallback prediction payload.')
+        setRiskPredictions([])
+        setRiskPredictionError('Live prediction feed unavailable.')
+        setRiskPredictionNotice('')
+        setIsThreatPanelOpen(false)
       }
     }
 
@@ -3941,6 +4349,12 @@ function App() {
       fetchController.abort()
     }
   }, [])
+
+  useEffect(() => {
+    if (!highRiskPredictions.length) {
+      setIsThreatPanelOpen(false)
+    }
+  }, [highRiskPredictions])
 
   useEffect(() => {
     const syncUnitWidgetBounds = () => {
@@ -4588,7 +5002,7 @@ function App() {
   }, [activeLayers.cctvPins])
 
   useEffect(() => {
-    if (!hasResolvedInitialCenter || !activeLayers.emergencyVehiclePins) {
+    if (!hasResolvedInitialCenter) {
       emergencyVehicleRuntimeRef.current = []
       emergencyVehicleRoutesRef.current = []
       emergencyVehicleLastTickRef.current = 0
@@ -4741,7 +5155,7 @@ function App() {
         window.clearInterval(simulationTimerId)
       }
     }
-  }, [activeLayers.emergencyVehiclePins, hasResolvedInitialCenter, syncThreatDispatchStatuses])
+  }, [hasResolvedInitialCenter, syncThreatDispatchStatuses])
 
   useEffect(() => {
     const now = Date.now()
@@ -5269,6 +5683,49 @@ function App() {
   }, [activeLayers.riskHeatmap, riskHeatmapCollection])
 
   useEffect(() => {
+    const map = mapRef.current
+
+    if (!map) {
+      return
+    }
+
+    const applyHighThreatRegionLayer = () => {
+      if (!map.isStyleLoaded()) {
+        return
+      }
+
+      ensureHighThreatRegionLayer(map)
+
+      const visibility = selectedRiskPrediction ? 'visible' : 'none'
+
+      if (map.getLayer(HIGH_THREAT_REGION_FILL_LAYER_ID)) {
+        map.setLayoutProperty(HIGH_THREAT_REGION_FILL_LAYER_ID, 'visibility', visibility)
+      }
+
+      if (map.getLayer(HIGH_THREAT_REGION_OUTLINE_LAYER_ID)) {
+        map.setLayoutProperty(HIGH_THREAT_REGION_OUTLINE_LAYER_ID, 'visibility', visibility)
+      }
+
+      const threatRegionSource = map.getSource(HIGH_THREAT_REGION_SOURCE_ID) as
+        | { setData: (data: ThreatRegionFeatureCollection) => void }
+        | undefined
+
+      threatRegionSource?.setData(
+        selectedRiskPrediction
+          ? buildHighThreatRegionCollection(selectedRiskPrediction)
+          : EMPTY_HIGH_THREAT_REGION_FEATURE_COLLECTION,
+      )
+    }
+
+    applyHighThreatRegionLayer()
+    map.on('load', applyHighThreatRegionLayer)
+
+    return () => {
+      map.off('load', applyHighThreatRegionLayer)
+    }
+  }, [selectedRiskPrediction])
+
+  useEffect(() => {
     setSelectedUnit((current) => {
       if (!current) {
         return current
@@ -5276,6 +5733,12 @@ function App() {
 
       if (current.kind === 'incident') {
         return incidents.some((incident) => incident.key === current.key) ? current : null
+      }
+
+      if (current.kind === 'riskPrediction') {
+        return highRiskPredictions.some((prediction) => prediction.prediction_id === current.key)
+          ? current
+          : null
       }
 
       if (current.kind === 'congregation') {
@@ -5296,7 +5759,7 @@ function App() {
 
       return current
     })
-  }, [incidents, congregationPlaces, cctvCameras, emergencyVehicles, rotorcraft])
+  }, [incidents, highRiskPredictions, congregationPlaces, cctvCameras, emergencyVehicles, rotorcraft])
 
   useEffect(() => {
     cctvHlsRef.current?.destroy()
@@ -5765,10 +6228,38 @@ function App() {
     [isIncidentsPanelOpen, openIncident],
   )
 
+  const focusRiskPredictionFromPanel = useCallback(
+    (prediction: PredictionApiResponse) => {
+      openRiskPrediction(prediction.prediction_id)
+
+      const map = mapRef.current
+
+      if (!map) {
+        return
+      }
+
+      const panelOffsetX = isThreatPanelOpen
+        ? Math.round(Math.min(180, map.getContainer().clientWidth * 0.16))
+        : 0
+
+      map.flyTo({
+        center: [
+          prediction.risk_assessment.coordinates.longitude,
+          prediction.risk_assessment.coordinates.latitude,
+        ],
+        offset: [-panelOffsetX, 0],
+        essential: true,
+        duration: 650,
+      })
+    },
+    [isThreatPanelOpen, openRiskPrediction],
+  )
+
   const shouldRenderUnitWidget =
     !isUnitWidgetDismissed &&
     Boolean(
       (selectedIncident && activeLayers.incidentPins) ||
+        selectedRiskPrediction ||
         (selectedCongregation && activeLayers.congregationPins) ||
         (selectedCctv && activeLayers.cctvPins) ||
         (selectedEmergencyVehicle && activeLayers.emergencyVehiclePins) ||
@@ -5798,6 +6289,47 @@ function App() {
             <h1>Unit Tracking</h1>
           </div>
           <p className="panel-subtext">Toggle live overlays and tactical instrumentation.</p>
+
+          <div className="threat-sidebar-control">
+            <button
+              type="button"
+              className={`threat-sidebar-control__button${
+                isThreatPanelOpen ? ' threat-sidebar-control__button--active' : ''
+              }`}
+              onClick={() => {
+                if (!hasHighRiskPredictions) {
+                  return
+                }
+
+                setIsThreatPanelOpen((current) => {
+                  const nextState = !current
+
+                  if (nextState) {
+                    setIsIncidentsPanelOpen(false)
+                  }
+
+                  return nextState
+                })
+              }}
+              disabled={!hasHighRiskPredictions}
+            >
+              <span className="threat-sidebar-control__label">Threat Notifications</span>
+              <strong>{highRiskPredictions.length.toString().padStart(2, '0')}</strong>
+              <small>
+                {hasHighRiskPredictions
+                  ? 'Open right panel to review high-risk events.'
+                  : 'No high-risk events in the latest prediction feed.'}
+              </small>
+            </button>
+            {riskPredictionNotice ? (
+              <p className="threat-sidebar-control__notice threat-sidebar-control__notice--success">
+                {riskPredictionNotice}
+              </p>
+            ) : null}
+            {riskPredictionError ? (
+              <p className="threat-sidebar-control__notice">{riskPredictionError}</p>
+            ) : null}
+          </div>
 
           <div className="section-heading" onClick={() => setIsLayersSectionOpen(o => !o)} style={{ cursor: "pointer", marginTop: "1rem", borderBottom: "1px solid #333", paddingBottom: "4px" }}>
             <h2 style={{ fontSize: "14px", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", color: "#ccc" }}>Layers {isLayersSectionOpen ? "[-]" : "[+]"}</h2>
@@ -6262,7 +6794,7 @@ function App() {
 
       <main
         className={`terminal-main${
-          activeLayers.incidentPins && isIncidentsPanelOpen
+          (activeLayers.incidentPins && isIncidentsPanelOpen) || isThreatPanelOpen
             ? ' terminal-main--incident-panel-open'
             : ''
         }`}
@@ -6304,6 +6836,8 @@ function App() {
               <div className="unit-widget__identity">
                 {selectedIncident ? (
                   <span className={`status-dot status-dot--${selectedIncident.severity}`} />
+                ) : selectedRiskPrediction ? (
+                  <span className="unit-widget__badge unit-widget__badge--threat">Threat</span>
                 ) : selectedAircraft ? (
                   <span className="unit-widget__badge unit-widget__badge--aircraft">Aircraft</span>
                 ) : selectedEmergencyVehicle ? (
@@ -6316,6 +6850,8 @@ function App() {
                 <span>
                   {selectedIncident
                     ? levelLabel(selectedIncident.level)
+                    : selectedRiskPrediction
+                      ? `${selectedRiskPrediction.risk_assessment.level.toUpperCase()} RISK ALERT`
                     : selectedAircraft
                       ? `ICAO24 ${selectedAircraft.icao24.toUpperCase()}`
                       : selectedEmergencyVehicle
@@ -6326,6 +6862,7 @@ function App() {
                 </span>
                 <h3>
                   {selectedIncident?.title ??
+                    selectedRiskPrediction?.risk_assessment.location_name ??
                     selectedAircraft?.callsign ??
                     selectedEmergencyVehicle?.unitCode ??
                     selectedCctv?.name ??
@@ -6344,6 +6881,86 @@ function App() {
             </div>
 
             {selectedIncident ? <p className="unit-widget__address">{selectedIncident.address}</p> : null}
+
+            {selectedRiskPrediction ? (
+              <>
+                <p className="unit-widget__address">
+                  {`${selectedRiskPrediction.prediction_id} | ${new Date(
+                    selectedRiskPrediction.timestamp,
+                  ).toLocaleString()}`}
+                </p>
+
+                <div className="unit-widget__updates">
+                  <p>
+                    <span>Assessment</span>
+                    {selectedRiskPrediction.risk_assessment.explanation}
+                  </p>
+                  <p>
+                    <span>Coordinates</span>
+                    {`${selectedRiskPrediction.risk_assessment.coordinates.latitude.toFixed(4)}, ${
+                      selectedRiskPrediction.risk_assessment.coordinates.longitude
+                    .toFixed(4)}`}
+                  </p>
+                  <p>
+                    <span>Incident ID</span>
+                    {selectedRiskPrediction.id ?? 'N/A'}
+                  </p>
+                </div>
+
+                <div className="unit-widget__updates">
+                  {selectedRiskPrediction.risk_assessment.risk_factors.map((factor) => (
+                    <p key={`${selectedRiskPrediction.prediction_id}-${factor}`}>
+                      <span>Risk Factor</span>
+                      {factor}
+                    </p>
+                  ))}
+                </div>
+
+                <div className="unit-widget__updates">
+                  <p>
+                    <span>Police Dispatch</span>
+                    {selectedRiskPrediction.mitigation_strategy.police_dispatch.action}
+                  </p>
+                  <p>
+                    <span>EMS Dispatch</span>
+                    {selectedRiskPrediction.mitigation_strategy.ems_dispatch.action}
+                  </p>
+                  <p>
+                    <span>Fire Dispatch</span>
+                    {selectedRiskPrediction.mitigation_strategy.fire_dispatch.action}
+                  </p>
+                  <p>
+                    <span>Medical Standby</span>
+                    {selectedRiskPrediction.mitigation_strategy.medical_standby.message}
+                  </p>
+                  <p>
+                    <span>Traffic Control</span>
+                    {selectedRiskPrediction.mitigation_strategy.traffic_control['re-routing']}
+                  </p>
+                </div>
+
+                <div className="threat-menu__actions">
+                  {threatActionItems.map((actionItem) => {
+                    const actionStatus = threatActionStatusById[actionItem.id] ?? 'idle'
+
+                    return (
+                      <button
+                        key={actionItem.id}
+                        type="button"
+                        className={`threat-menu__action-button threat-menu__action-button--${actionStatus}`}
+                        onClick={() => handleThreatActionPress(actionItem)}
+                      >
+                        <strong>{actionItem.label}</strong>
+                        <span>{actionItem.detail}</span>
+                        <em className={`threat-menu__action-status threat-menu__action-status--${actionStatus}`}>
+                          {threatActionStatusLabel(actionStatus)}
+                        </em>
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            ) : null}
 
             {selectedIncident ? (
               <div className="unit-widget__updates">
@@ -6544,89 +7161,78 @@ function App() {
           </section>
         ) : null}
 
-        <section className={`threat-menu${isThreatMenuOpen ? ' threat-menu--open' : ''}`}>
-          <button
-            type="button"
-            className="threat-menu__toggle"
-            onClick={() => setIsThreatMenuOpen((current) => !current)}
-            aria-expanded={isThreatMenuOpen}
-            aria-controls="threat-menu-panel"
-          >
-            <span className="threat-menu__toggle-label">Threat Notification</span>
-            <strong>{`${riskPrediction.risk_assessment.level.toUpperCase()} RISK`}</strong>
-            <span className="threat-menu__toggle-state">
-              {isThreatMenuOpen ? 'Collapse' : 'Expand'}
-            </span>
-          </button>
+        {hasHighRiskPredictions ? (
+          <section className={`threat-strip${isThreatPanelOpen ? '' : ' threat-strip--collapsed'}`}>
+            <button
+              type="button"
+              className="threat-strip__toggle"
+              onClick={() => {
+                setIsThreatPanelOpen((current) => {
+                  const nextState = !current
 
-          {isThreatMenuOpen ? (
-            <div className="threat-menu__panel" id="threat-menu-panel">
-              <div className="threat-menu__section">
-                <h3>{riskPrediction.risk_assessment.location_name}</h3>
-                <p className="threat-menu__meta">
-                  <span>{riskPrediction.prediction_id}</span>
-                  <span>{new Date(riskPrediction.timestamp).toLocaleString()}</span>
-                </p>
-                {riskPredictionError ? <p className="threat-menu__notice">{riskPredictionError}</p> : null}
-                <p className="threat-menu__copy">{riskPrediction.risk_assessment.explanation}</p>
-              </div>
+                  if (nextState) {
+                    setIsIncidentsPanelOpen(false)
+                  }
 
-              <div className="threat-menu__section">
-                <h4>Threat Factors</h4>
-                <ul className="threat-menu__list">
-                  {riskPrediction.risk_assessment.risk_factors.map((factor) => (
-                    <li key={factor}>{factor}</li>
-                  ))}
-                </ul>
-              </div>
+                  return nextState
+                })
+              }}
+              aria-label={isThreatPanelOpen ? 'Collapse threat events panel' : 'Expand threat events panel'}
+            >
+              {isThreatPanelOpen ? '>' : '<'}
+            </button>
 
-              <div className="threat-menu__section">
-                <h4>Possible Solutions</h4>
-                <div className="threat-menu__copy-grid">
-                  <p>
-                    <span>Police Dispatch</span>
-                    {riskPrediction.mitigation_strategy.police_dispatch.action}
-                  </p>
-                  <p>
-                    <span>Medical Standby</span>
-                    {riskPrediction.mitigation_strategy.medical_standby.message}
-                  </p>
-                  <p>
-                    <span>Traffic Control</span>
-                    {riskPrediction.mitigation_strategy.traffic_control['re-routing']}
-                  </p>
-                </div>
-                <div className="threat-menu__actions">
-                  {threatActionItems.map((actionItem) => {
-                    const actionStatus = threatActionStatusById[actionItem.id] ?? 'idle'
-
-                    return (
-                      <button
-                        key={actionItem.id}
-                        type="button"
-                        className={`threat-menu__action-button threat-menu__action-button--${actionStatus}`}
-                        onClick={() => handleThreatActionPress(actionItem)}
-                      >
-                        <strong>{actionItem.label}</strong>
-                        <span>{actionItem.detail}</span>
-                        <em className={`threat-menu__action-status threat-menu__action-status--${actionStatus}`}>
-                          {threatActionStatusLabel(actionStatus)}
-                        </em>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+            <div className="threat-strip__header">
+              <strong>High Risk Events</strong>
+              <button
+                type="button"
+                onClick={() => setIsThreatPanelOpen(false)}
+                aria-label="Close threat events panel"
+              >
+                X
+              </button>
             </div>
-          ) : null}
-        </section>
+
+            <div className="threat-strip__list">
+              {highRiskPredictions.map((prediction) => (
+                <button
+                  key={`${prediction.prediction_id}-${prediction.timestamp}`}
+                  type="button"
+                  className={`threat-row ${
+                    prediction.prediction_id === selectedRiskPredictionKey
+                      ? 'threat-row--selected'
+                      : ''
+                  }`}
+                  onClick={() => focusRiskPredictionFromPanel(prediction)}
+                >
+                  <span className="status-dot status-dot--red" />
+                  <span className="threat-row__status">
+                    {`${prediction.risk_assessment.level.toUpperCase()} RISK`}
+                  </span>
+                  <strong>{prediction.risk_assessment.location_name}</strong>
+                  <span className="threat-row__action">Open</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {activeLayers.incidentPins ? (
           <section className={`unit-strip${isIncidentsPanelOpen ? '' : ' unit-strip--collapsed'}`}>
             <button
               type="button"
               className="unit-strip__toggle"
-              onClick={() => setIsIncidentsPanelOpen((current) => !current)}
+              onClick={() => {
+                setIsIncidentsPanelOpen((current) => {
+                  const nextState = !current
+
+                  if (nextState) {
+                    setIsThreatPanelOpen(false)
+                  }
+
+                  return nextState
+                })
+              }}
               aria-label={isIncidentsPanelOpen ? 'Collapse incidents panel' : 'Expand incidents panel'}
             >
               {isIncidentsPanelOpen ? '>' : '<'}
