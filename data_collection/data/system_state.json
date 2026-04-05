@@ -1,0 +1,488 @@
+{
+  "last_gemini_run_at": "2026-04-05T00:57:38.425631+00:00",
+  "seen_incidents": {
+    "-OpQ7LqhPuyISPLOPLqm": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.430_-111.925",
+      "last_lat": 33.465784,
+      "last_lng": -111.987223
+    },
+    "-OpQ6hzitW04OXOok8Wa": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.430_-111.925",
+      "last_lat": 33.392859692621,
+      "last_lng": -111.960787496676
+    },
+    "-OpQ0Rg6dz2lV5MYu9G-": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.392950321384,
+      "last_lng": -111.890444338192
+    },
+    "-OpPy5Sq2kUBm1hTOV2L": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.46583030569,
+      "last_lng": -112.083382484411
+    },
+    "-OpPx83fj7ujLEmMoyJm": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.465798,
+      "last_lng": -112.083848
+    },
+    "-OpPqO3PX3G2jt6O5mIv": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.45487,
+      "last_lng": -112.075223
+    },
+    "-OpPp_jgHNbrQ2WJIfR8": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.465821,
+      "last_lng": -112.082642
+    },
+    "-OpPWmdhtae_MADmIQ5b": {
+      "last_severity": 9,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.494717,
+      "last_lng": -112.062861
+    },
+    "-OpPQg8SYzIupxd0_4IC": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.38585,
+      "last_lng": -111.88322
+    },
+    "-OpPF3pV7mGY3Jj97eLe": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.304682450045,
+      "last_lng": -112.013905407867
+    },
+    "-OpOmittcvq6d7NGw1yh": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.301950494434,
+      "last_lng": -111.995241675524
+    },
+    "-OpOjCHB5DgvvmDo1ESb": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.377635,
+      "last_lng": -112.041905
+    },
+    "-OpO9EY93Eg9qc5nwQkl": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.463221,
+      "last_lng": -112.096797
+    },
+    "-OpNZh7EnF0hjx9kaWoA": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.461879,
+      "last_lng": -112.078003
+    },
+    "-OpNPFCjY0lYqHH_uAdW": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.4088467,
+      "last_lng": -112.0408613
+    },
+    "-OpMbK4gPAGdP5MPc9Ym": {
+      "last_severity": 6,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.392207744837,
+      "last_lng": -112.081947226077
+    },
+    "-OpMLMqe7FoZmx47BZlk": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.458665094086,
+      "last_lng": -112.069083811747
+    },
+    "-OpMGp8ZSsOY7kAE45Xl": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.404916798264,
+      "last_lng": -112.069996175275
+    },
+    "-OpM2-Ty3VDE3LLWq-KS": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.38073,
+      "last_lng": -111.83983
+    },
+    "-OpLwZiBLwhgSlmvJiDb": {
+      "last_severity": 5,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.49497,
+      "last_lng": -112.01386
+    },
+    "-OpLvdeq4RiW8HClHzy_": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.458309,
+      "last_lng": -112.06519
+    },
+    "-OpLsamfmIBrsHNZ6vKi": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.377756338429,
+      "last_lng": -112.047348985617
+    },
+    "-OpLnHsCc-x_b8cjNeZw": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.480251,
+      "last_lng": -112.089802
+    },
+    "-OpLWCgQwXPj163PZ3tf": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.454707,
+      "last_lng": -112.075197
+    },
+    "-OpLQ6FDgp1vKuSTdmdu": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.373845807916,
+      "last_lng": -112.047632174589
+    },
+    "-OpLIMYl2HVJnXzmu1Nm": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.430_-111.925",
+      "last_lat": 33.47896,
+      "last_lng": -111.96754
+    },
+    "-OpL9cP0j-kW91SqWSGY": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.465765621246,
+      "last_lng": -112.035759178472
+    },
+    "-OpKzn4oKTQUIemhSHvE": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.480466,
+      "last_lng": -112.093083
+    },
+    "-OpKsVYtMGgc08EtOSeA": {
+      "last_severity": 6,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.430_-111.925",
+      "last_lat": 33.378256341726,
+      "last_lng": -111.961655835109
+    },
+    "-OpKWUZ0BvmjfdlDrcpK": {
+      "last_severity": 6,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.305133983169,
+      "last_lng": -112.014601022012
+    },
+    "-OpKVvrTEtIKoDJEgXTJ": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.305202300013,
+      "last_lng": -112.014492086333
+    },
+    "-OpHR_ErBzpFGZ4Zw6HC": {
+      "last_severity": 5,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.430_-111.925",
+      "last_lat": 33.377920259751,
+      "last_lng": -112.002936197193
+    },
+    "-OpH2K7SZTcoelp_Qyg4": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.30589,
+      "last_lng": -111.84587
+    },
+    "-OpH1HUdrY1TBWFFgUuE": {
+      "last_severity": 5,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.49787,
+      "last_lng": -112.03679
+    },
+    "-OpH--fSA1KrYU-QRtaA": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.35452,
+      "last_lng": -111.95988
+    },
+    "-OpGXFw3_dO_RbrsQMIE": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.496611089859,
+      "last_lng": -112.034142242397
+    },
+    "-OpGOSBQp0okvtJ2FkWq": {
+      "last_severity": 5,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.431156,
+      "last_lng": -112.080454
+    },
+    "-OpFp_mvR-OxfIB8K2X3": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.430_-111.925",
+      "last_lat": 33.428811121213,
+      "last_lng": -111.926276919883
+    },
+    "-OpFo5nOPAKBTd-dEpoX": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.3858354,
+      "last_lng": -111.8231273
+    },
+    "-OpFmbQ1ecb8yEG5vjWJ": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.360166972445,
+      "last_lng": -111.869777638554
+    },
+    "-OpFbpLSvqGH8Ir0oRuU": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.430_-111.925",
+      "last_lat": 33.468192295192,
+      "last_lng": -111.97762450595
+    },
+    "-OpFRnHcX_057Yw3xjBp": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.480186,
+      "last_lng": -111.987076
+    },
+    "-OpFGgnoiKrLBEjKB8NK": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.438247,
+      "last_lng": -112.079373
+    },
+    "-OpF9DOz8WpdvJIhVR8U": {
+      "last_severity": 6,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.3048083,
+      "last_lng": -112.0332717
+    },
+    "-OpF3dYx9Q9rOFmxycNO": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.430_-111.925",
+      "last_lat": 33.464185558215,
+      "last_lng": -111.932691033584
+    },
+    "-OpEwIC8cSE5fCzJvjvy": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.494654,
+      "last_lng": -111.981176
+    },
+    "-OpEgqMA6pso2NjhNYDc": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.471245,
+      "last_lng": -112.050248
+    },
+    "-OpEa9AbJoCD5WGsz1lI": {
+      "last_severity": 8,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.307978916999,
+      "last_lng": -111.841434576297
+    },
+    "-OpD54blMReUQnHabcfL": {
+      "last_severity": 3,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.395_-111.890",
+      "last_lat": 33.305993882616,
+      "last_lng": -111.894147708963
+    },
+    "-OpBzT9JJVZzKaOMHpCi": {
+      "last_severity": 5,
+      "last_seen_at": "2026-04-05T00:57:38.425631+00:00",
+      "last_status": "active",
+      "last_zone": "grid_33.465_-112.065",
+      "last_lat": 33.451274,
+      "last_lng": -111.999701
+    }
+  },
+  "active_incidents": [
+    "-OpBzT9JJVZzKaOMHpCi",
+    "-OpD54blMReUQnHabcfL",
+    "-OpEa9AbJoCD5WGsz1lI",
+    "-OpEgqMA6pso2NjhNYDc",
+    "-OpEwIC8cSE5fCzJvjvy",
+    "-OpF3dYx9Q9rOFmxycNO",
+    "-OpF9DOz8WpdvJIhVR8U",
+    "-OpFGgnoiKrLBEjKB8NK",
+    "-OpFRnHcX_057Yw3xjBp",
+    "-OpFbpLSvqGH8Ir0oRuU",
+    "-OpFmbQ1ecb8yEG5vjWJ",
+    "-OpFo5nOPAKBTd-dEpoX",
+    "-OpFp_mvR-OxfIB8K2X3",
+    "-OpGOSBQp0okvtJ2FkWq",
+    "-OpGXFw3_dO_RbrsQMIE",
+    "-OpH--fSA1KrYU-QRtaA",
+    "-OpH1HUdrY1TBWFFgUuE",
+    "-OpH2K7SZTcoelp_Qyg4",
+    "-OpHR_ErBzpFGZ4Zw6HC",
+    "-OpKVvrTEtIKoDJEgXTJ",
+    "-OpKWUZ0BvmjfdlDrcpK",
+    "-OpKsVYtMGgc08EtOSeA",
+    "-OpKzn4oKTQUIemhSHvE",
+    "-OpL9cP0j-kW91SqWSGY",
+    "-OpLIMYl2HVJnXzmu1Nm",
+    "-OpLQ6FDgp1vKuSTdmdu",
+    "-OpLWCgQwXPj163PZ3tf",
+    "-OpLnHsCc-x_b8cjNeZw",
+    "-OpLsamfmIBrsHNZ6vKi",
+    "-OpLvdeq4RiW8HClHzy_",
+    "-OpLwZiBLwhgSlmvJiDb",
+    "-OpM2-Ty3VDE3LLWq-KS",
+    "-OpMGp8ZSsOY7kAE45Xl",
+    "-OpMLMqe7FoZmx47BZlk",
+    "-OpMbK4gPAGdP5MPc9Ym",
+    "-OpNPFCjY0lYqHH_uAdW",
+    "-OpNZh7EnF0hjx9kaWoA",
+    "-OpO9EY93Eg9qc5nwQkl",
+    "-OpOjCHB5DgvvmDo1ESb",
+    "-OpOmittcvq6d7NGw1yh",
+    "-OpPF3pV7mGY3Jj97eLe",
+    "-OpPQg8SYzIupxd0_4IC",
+    "-OpPWmdhtae_MADmIQ5b",
+    "-OpPp_jgHNbrQ2WJIfR8",
+    "-OpPqO3PX3G2jt6O5mIv",
+    "-OpPx83fj7ujLEmMoyJm",
+    "-OpPy5Sq2kUBm1hTOV2L",
+    "-OpQ0Rg6dz2lV5MYu9G-",
+    "-OpQ6hzitW04OXOok8Wa",
+    "-OpQ7LqhPuyISPLOPLqm"
+  ],
+  "recent_triggers": [
+    {
+      "type": "critical",
+      "timestamp": "2026-04-05T00:49:32.466687+00:00"
+    },
+    {
+      "type": "cluster",
+      "timestamp": "2026-04-05T00:50:08.990699+00:00"
+    },
+    {
+      "type": "critical",
+      "timestamp": "2026-04-05T00:52:43.569729+00:00"
+    },
+    {
+      "type": "critical",
+      "timestamp": "2026-04-05T00:53:30.719924+00:00"
+    },
+    {
+      "type": "cluster",
+      "timestamp": "2026-04-05T00:54:30.790613+00:00"
+    },
+    {
+      "type": "critical",
+      "timestamp": "2026-04-05T00:56:38.311458+00:00"
+    },
+    {
+      "type": "cluster",
+      "timestamp": "2026-04-05T00:57:38.425631+00:00"
+    }
+  ],
+  "last_top_zone_score": 0.75
+}

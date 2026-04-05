@@ -17,6 +17,7 @@ from events_data import fetch_events_data
 from gemini_trigger import evaluate_trigger
 from historical_data import fetch_historical_cells
 from risk_areas_data import fetch_risk_areas
+from risk_engine import run_risk_engine
 from traffic_data import fetch_traffic_data
 from unit_simulation import get_unit_states, tick
 from weather_data import fetch_weather_snapshot
@@ -142,6 +143,13 @@ def _job_units() -> None:
         _log(f"units job error: {err}")
 
 
+def _job_risk_engine() -> None:
+    try:
+        run_risk_engine()
+    except Exception as err:
+        _log(f"risk engine job error: {err}")
+
+
 def _job_gemini_trigger() -> None:
     try:
         fired = evaluate_trigger()
@@ -204,6 +212,7 @@ def _startup_bootstrap() -> None:
     except Exception as err:
         _log(f"units startup error: {err}")
 
+    _job_risk_engine()
     _job_gemini_trigger()
 
 
@@ -216,6 +225,7 @@ def _configure_scheduler() -> BlockingScheduler:
     scheduler.add_job(_job_events, "interval", minutes=60, id="events", max_instances=1, coalesce=True)
     scheduler.add_job(_job_risk_areas, "interval", hours=24, id="risk_areas", max_instances=1, coalesce=True)
     scheduler.add_job(_job_units, "interval", seconds=30, id="units", max_instances=1, coalesce=True)
+    scheduler.add_job(_job_risk_engine, "interval", seconds=30, id="risk_engine", max_instances=1, coalesce=True)
     scheduler.add_job(_job_gemini_trigger, "interval", seconds=60, id="gemini_trigger", max_instances=1, coalesce=True)
 
     return scheduler
@@ -224,6 +234,7 @@ def _configure_scheduler() -> BlockingScheduler:
 def main() -> None:
     _ensure_data_dir()
     _print_key_status()
+    _log("risk_engine: active")
     _startup_bootstrap()
     _save_world_state()
 

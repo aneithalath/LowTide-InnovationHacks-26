@@ -1,0 +1,66 @@
+{
+  "generated_at": "2026-04-05T01:23:32.196607+00:00",
+  "trigger_tier": null,
+  "trigger_reasons": [],
+  "overall_risk_level": "MODERATE",
+  "situation": {
+    "total_active_incidents": 50,
+    "new_or_escalated_this_cycle": 0,
+    "resolved_this_cycle": 0,
+    "units_available": 37,
+    "units_deployed": 0,
+    "weather": "scattered clouds, 88F, no alerts"
+  },
+  "delta_incidents": [],
+  "ongoing_critical": [
+    {
+      "id": "-OpQ8vti63vAY_0Z15oU",
+      "severity": 7
+    },
+    {
+      "id": "-OpPWmdhtae_MADmIQ5b",
+      "severity": 8
+    }
+  ],
+  "top_3_zones": [
+    {
+      "rank": 1,
+      "zone_id": "grid_33.425_-111.930",
+      "composite_risk_score": 0.5475,
+      "primary_driver": "1 active incidents within 0.5mi (max severity: 7)",
+      "incident_count_nearby": 1,
+      "recommended_action": "Dispatch P-307 to grid_33.425_-111.930",
+      "nearest_unit": "P-307"
+    },
+    {
+      "rank": 2,
+      "zone_id": "grid_33.430_-111.930",
+      "composite_risk_score": 0.5295,
+      "primary_driver": "1 active incidents within 0.5mi (max severity: 7)",
+      "incident_count_nearby": 1,
+      "recommended_action": "Dispatch P-305 to grid_33.430_-111.930",
+      "nearest_unit": "P-305"
+    },
+    {
+      "rank": 3,
+      "zone_id": "grid_33.465_-112.065",
+      "composite_risk_score": 0.503,
+      "primary_driver": "4 active incidents within 0.5mi (max severity: 10)",
+      "incident_count_nearby": 4,
+      "recommended_action": "Dispatch TEMPE-FIRE-10 to grid_33.465_-112.065",
+      "nearest_unit": "TEMPE-FIRE-10"
+    }
+  ],
+  "traffic_concern": [
+    {
+      "label": "Southern Ave / Rural Rd",
+      "congestion_score": 0.23
+    }
+  ],
+  "recommended_actions": [
+    "Dispatch P-307 to grid_33.425_-111.930",
+    "Dispatch P-305 to grid_33.430_-111.930",
+    "Dispatch TEMPE-FIRE-10 to grid_33.465_-112.065"
+  ],
+  "vehicle_data_available": true
+}

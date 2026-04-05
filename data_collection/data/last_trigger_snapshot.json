@@ -1,11 +1,6 @@
 {
-  "captured_at": "2026-04-04T22:24:28.666049+00:00",
+  "captured_at": "2026-04-05T01:23:32.196849+00:00",
   "incident_ids": [
-    "-OpBJybsnCD9wGuhjyml",
-    "-OpBKLwirHz0Za30Y8C4",
-    "-OpBQBOoCI3xOVkmOmx-",
-    "-OpBQtitIRIIgQ1v3Oy0",
-    "-OpBzT9JJVZzKaOMHpCi",
     "-OpD54blMReUQnHabcfL",
     "-OpEa9AbJoCD5WGsz1lI",
     "-OpEgqMA6pso2NjhNYDc",
@@ -39,34 +34,39 @@
     "-OpM2-Ty3VDE3LLWq-KS",
     "-OpMGp8ZSsOY7kAE45Xl",
     "-OpMLMqe7FoZmx47BZlk",
+    "-OpMRNWnDqiAZeNGFa5Q",
     "-OpMbK4gPAGdP5MPc9Ym",
     "-OpNPFCjY0lYqHH_uAdW",
+    "-OpNZh7EnF0hjx9kaWoA",
     "-OpOjCHB5DgvvmDo1ESb",
     "-OpOmittcvq6d7NGw1yh",
-    "-OpP8PX1vfsAH4CZSRXO",
-    "-OpPJ8IQNZ2QaDMzTJrk",
+    "-OpP5tR0gYwnHCma6RWI",
+    "-OpPF3pV7mGY3Jj97eLe",
     "-OpPK4f0CLGO5Nk9NMJX",
-    "-OpPPgSAgOsOtdjEjpg9",
     "-OpPQg8SYzIupxd0_4IC",
-    "-OpPWfMjqbmxbgQ1Buxk",
     "-OpPWmdhtae_MADmIQ5b",
-    "-OpPXL_w_OvB_9Asuo2O"
+    "-OpPnAvDtkgD1GI30UEI",
+    "-OpPy5Sq2kUBm1hTOV2L",
+    "-OpQ8VXa8VWrr2HXw6WJ",
+    "-OpQ8vti63vAY_0Z15oU",
+    "-OpQACLFAG5HCF7UQvuM",
+    "-OpQAnnkqO6oyHJ3AGzl"
   ],
   "incident_count": 50,
   "weather_alert_active": false,
   "traffic_near_hotspots": {
     "tomtom_mill_ave_university_dr": {
-      "score": 0.23,
+      "score": 0.19,
       "label": "Mill Ave / University Dr",
       "hotspot": "Mill Ave Corridor"
     },
     "tomtom_apache_blvd_rural_rd": {
-      "score": 0.0,
+      "score": 0.2,
       "label": "Apache Blvd / Rural Rd",
       "hotspot": "Tempe Marketplace"
     },
     "tomtom_broadway_rd_mcclintock_dr": {
-      "score": 0.3,
+      "score": 0.2,
       "label": "Broadway Rd / McClintock Dr",
       "hotspot": "Tempe Marketplace"
     },
@@ -76,12 +76,12 @@
       "hotspot": "Mill Ave Corridor"
     },
     "tomtom_asu_campus_palm_walk": {
-      "score": 0.32,
+      "score": 0.0,
       "label": "ASU Campus / Palm Walk",
       "hotspot": "Mill Ave Corridor"
     },
     "tomtom_rural_rd_rio_salado": {
-      "score": 0.0,
+      "score": 0.17,
       "label": "Rural Rd / Rio Salado",
       "hotspot": "Mill Ave Corridor"
     }
@@ -89,6 +89,35 @@
   "dispatched_units": 0,
   "high_event_keys": [],
   "moderate_event_keys": [],
-  "last_trigger_at": "2026-04-04T22:07:31.768065+00:00",
-  "last_trigger_tier": "critical"
+  "triggered_critical_ids": [
+    "-OpLQ6FDgp1vKuSTdmdu",
+    "-OpLvdeq4RiW8HClHzy_",
+    "-OpOjCHB5DgvvmDo1ESb",
+    "-OpPWmdhtae_MADmIQ5b"
+  ],
+  "triggered_high_ids": [
+    "-OpEa9AbJoCD5WGsz1lI",
+    "-OpF3dYx9Q9rOFmxycNO",
+    "-OpF9DOz8WpdvJIhVR8U",
+    "-OpFbpLSvqGH8Ir0oRuU",
+    "-OpFmbQ1ecb8yEG5vjWJ",
+    "-OpFp_mvR-OxfIB8K2X3",
+    "-OpGXFw3_dO_RbrsQMIE",
+    "-OpKVvrTEtIKoDJEgXTJ",
+    "-OpKWUZ0BvmjfdlDrcpK",
+    "-OpKsVYtMGgc08EtOSeA",
+    "-OpLsamfmIBrsHNZ6vKi",
+    "-OpMGp8ZSsOY7kAE45Xl",
+    "-OpMLMqe7FoZmx47BZlk",
+    "-OpMRNWnDqiAZeNGFa5Q",
+    "-OpMbK4gPAGdP5MPc9Ym",
+    "-OpP5tR0gYwnHCma6RWI",
+    "-OpPy5Sq2kUBm1hTOV2L",
+    "-OpQ8VXa8VWrr2HXw6WJ",
+    "-OpQ8vti63vAY_0Z15oU",
+    "-OpQAnnkqO6oyHJ3AGzl"
+  ],
+  "cluster_detected": true,
+  "last_trigger_at": "2026-04-05T01:22:32.083662+00:00",
+  "last_trigger_tier": "high"
 }

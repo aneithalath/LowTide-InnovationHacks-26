@@ -1,0 +1,632 @@
+{
+  "-OpQAnnkqO6oyHJ3AGzl": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 6,
+    "last_title": "Hit-and-Run Crash",
+    "last_lat": 33.480802161377,
+    "last_lng": -112.091066442472,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpQACLFAG5HCF7UQvuM": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 4,
+    "last_title": "Burglary at Storage Facility",
+    "last_lat": 33.442567984314,
+    "last_lng": -112.080683024638,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpQ8vti63vAY_0Z15oU": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 7,
+    "last_title": "People Fighting",
+    "last_lat": 33.377971657121,
+    "last_lng": -111.990135929087,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpQ8VXa8VWrr2HXw6WJ": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 6,
+    "last_title": "Vehicle Collision",
+    "last_lat": 33.385726106781,
+    "last_lng": -111.934094582246,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpPfei7ay5CDB3VLroV": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:21:53.215684+00:00",
+    "last_severity": 7,
+    "last_title": "Dumpster Fire",
+    "last_lat": 33.305997803274,
+    "last_lng": -111.886432218836,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpPWmdhtae_MADmIQ5b": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 8,
+    "last_title": "Person Trapped Following Collision",
+    "last_lat": 33.494717,
+    "last_lng": -112.062861,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpPQg8SYzIupxd0_4IC": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Traffic Congestion",
+    "last_lat": 33.38585,
+    "last_lng": -111.88322,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpP7NYQTKxstV1EA_7g": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:21:53.215684+00:00",
+    "last_severity": 1,
+    "last_title": "Police Activity",
+    "last_lat": 33.472141,
+    "last_lng": -111.987126,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpOmittcvq6d7NGw1yh": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 3,
+    "last_title": "Person on Box Scooter Hit by Classic Ford LTD",
+    "last_lat": 33.301950494434,
+    "last_lng": -111.995241675524,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpOjCHB5DgvvmDo1ESb": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 10,
+    "last_title": "Report of Person Shot, Officers on Scene",
+    "last_lat": 33.377635,
+    "last_lng": -112.041905,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpOWZOF1vZEqve499Hl": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:21:53.215684+00:00",
+    "last_severity": 7,
+    "last_title": "Debris Fire",
+    "last_lat": 33.464676789298,
+    "last_lng": -112.063568565302,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpNPFCjY0lYqHH_uAdW": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Police Activity",
+    "last_lat": 33.4088467,
+    "last_lng": -112.0408613,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpMbK4gPAGdP5MPc9Ym": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 6,
+    "last_title": "Road Closed for Crash Investigation",
+    "last_lat": 33.392207744837,
+    "last_lng": -112.081947226077,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpMLMqe7FoZmx47BZlk": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 7,
+    "last_title": "Report of Man With Gun Involved in Fight",
+    "last_lat": 33.458665094086,
+    "last_lng": -112.069083811747,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpMGp8ZSsOY7kAE45Xl": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 7,
+    "last_title": "House Fire",
+    "last_lat": 33.404916798264,
+    "last_lng": -112.069996175275,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpM3nSKiYssItHXtj3G": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:19:37.069490+00:00",
+    "last_severity": 7,
+    "last_title": "People Fighting",
+    "last_lat": 33.479769,
+    "last_lng": -111.964157,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpM2-Ty3VDE3LLWq-KS": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Police Activity",
+    "last_lat": 33.38073,
+    "last_lng": -111.83983,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpLwZiBLwhgSlmvJiDb": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "EMS Activity",
+    "last_lat": 33.49497,
+    "last_lng": -112.01386,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpLvdeq4RiW8HClHzy_": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 10,
+    "last_title": "Report of Six Shots Fired",
+    "last_lat": 33.458309,
+    "last_lng": -112.06519,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpLsamfmIBrsHNZ6vKi": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 6,
+    "last_title": "Vehicle Collision",
+    "last_lat": 33.377756338429,
+    "last_lng": -112.047348985617,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpLnHsCc-x_b8cjNeZw": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Man Taking Hot Dog Buns, Yelling at Employee at Circle K",
+    "last_lat": 33.480251,
+    "last_lng": -112.089802,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpLWCgQwXPj163PZ3tf": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 3,
+    "last_title": "Report of Person With Gun",
+    "last_lat": 33.454707,
+    "last_lng": -112.075197,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpLQ6FDgp1vKuSTdmdu": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 10,
+    "last_title": "Report of Shooting",
+    "last_lat": 33.373845807916,
+    "last_lng": -112.047632174589,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpLIMYl2HVJnXzmu1Nm": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Two Men Yelling Near Apartment",
+    "last_lat": 33.47896,
+    "last_lng": -111.96754,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpL9cP0j-kW91SqWSGY": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Natural Gas Leak",
+    "last_lat": 33.465765621246,
+    "last_lng": -112.035759178472,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpKzn4oKTQUIemhSHvE": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 3,
+    "last_title": "Residence Broken Into",
+    "last_lat": 33.480466,
+    "last_lng": -112.093083,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpKsVYtMGgc08EtOSeA": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 6,
+    "last_title": "Vehicle Collision",
+    "last_lat": 33.378256341726,
+    "last_lng": -111.961655835109,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpKWUZ0BvmjfdlDrcpK": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 6,
+    "last_title": "Multi-Vehicle Collision",
+    "last_lat": 33.305133983169,
+    "last_lng": -112.014601022012,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpKVvrTEtIKoDJEgXTJ": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 6,
+    "last_title": "Vehicle Collision",
+    "last_lat": 33.305202300013,
+    "last_lng": -112.014492086333,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpHR_ErBzpFGZ4Zw6HC": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Man, Woman Stealing Items at QuikTrip",
+    "last_lat": 33.377920259751,
+    "last_lng": -112.002936197193,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpH2K7SZTcoelp_Qyg4": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Police Activity",
+    "last_lat": 33.30589,
+    "last_lng": -111.84587,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpH1HUdrY1TBWFFgUuE": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "EMS Activity",
+    "last_lat": 33.49787,
+    "last_lng": -112.03679,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpH--fSA1KrYU-QRtaA": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Report of Tow Truck Activity",
+    "last_lat": 33.35452,
+    "last_lng": -111.95988,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpGXFw3_dO_RbrsQMIE": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 7,
+    "last_title": "Man Critically Hurt in Residence Fire",
+    "last_lat": 33.496611089859,
+    "last_lng": -112.034142242397,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpGOSBQp0okvtJ2FkWq": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Police Activity",
+    "last_lat": 33.431156,
+    "last_lng": -112.080454,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpFp_mvR-OxfIB8K2X3": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 7,
+    "last_title": "Grass Fire",
+    "last_lat": 33.428811121213,
+    "last_lng": -111.926276919883,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpFo5nOPAKBTd-dEpoX": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Police Block Road for Stuck Semi",
+    "last_lat": 33.3858354,
+    "last_lng": -111.8231273,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpFmbQ1ecb8yEG5vjWJ": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 7,
+    "last_title": "House Fire",
+    "last_lat": 33.360166972445,
+    "last_lng": -111.869777638554,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpFbpLSvqGH8Ir0oRuU": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 7,
+    "last_title": "House Fire",
+    "last_lat": 33.468192295192,
+    "last_lng": -111.97762450595,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpFRnHcX_057Yw3xjBp": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "2023 Hyundai Elantra Stalled on Roadway",
+    "last_lat": 33.480186,
+    "last_lng": -111.987076,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpFGgnoiKrLBEjKB8NK": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Woman Yelling and Throwing Clothes Around",
+    "last_lat": 33.438247,
+    "last_lng": -112.079373,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpF9DOz8WpdvJIhVR8U": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 6,
+    "last_title": "Report of Vehicle Collision",
+    "last_lat": 33.3048083,
+    "last_lng": -112.0332717,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpF3dYx9Q9rOFmxycNO": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 7,
+    "last_title": "House Fire",
+    "last_lat": 33.464185558215,
+    "last_lng": -111.932691033584,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpEwIC8cSE5fCzJvjvy": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Allergic Reaction",
+    "last_lat": 33.494654,
+    "last_lng": -111.981176,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpEgqMA6pso2NjhNYDc": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 3,
+    "last_title": "Be on the Lookout for Man in 2018 Black Nissan Sentra",
+    "last_lat": 33.471245,
+    "last_lng": -112.050248,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpEa9AbJoCD5WGsz1lI": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 6,
+    "last_title": "Vehicle Collision Involving Pedestrian",
+    "last_lat": 33.307978916999,
+    "last_lng": -111.841434576297,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpD54blMReUQnHabcfL": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 3,
+    "last_title": "Search for Duo Who Carjacked Kia Forte at Gunpoint",
+    "last_lat": 33.305993882616,
+    "last_lng": -111.894147708963,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpBzT9JJVZzKaOMHpCi": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:19:37.069490+00:00",
+    "last_severity": 1,
+    "last_title": "Person Stealing Items",
+    "last_lat": 33.451274,
+    "last_lng": -111.999701,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpBQtitIRIIgQ1v3Oy0": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:19:37.069490+00:00",
+    "last_severity": 6,
+    "last_title": "Vehicle Collision",
+    "last_lat": 33.461706107104,
+    "last_lng": -112.089415260261,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpBQBOoCI3xOVkmOmx-": {
+    "first_seen": "2026-04-05T01:18:06.820709+00:00",
+    "last_seen": "2026-04-05T01:19:37.069490+00:00",
+    "last_severity": 1,
+    "last_title": "Woman Stole $500 Worth of Items From Target",
+    "last_lat": 33.480098,
+    "last_lng": -111.984335,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpQ7TGyD7NSbCXf9zdH": {
+    "first_seen": "2026-04-05T01:20:22.910766+00:00",
+    "last_seen": "2026-04-05T01:21:53.215684+00:00",
+    "last_severity": 1,
+    "last_title": "Police Activity",
+    "last_lat": 33.49484,
+    "last_lng": -112.081434,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpQ0Rg3SqtwP_eBXQln": {
+    "first_seen": "2026-04-05T01:20:22.910766+00:00",
+    "last_seen": "2026-04-05T01:21:53.215684+00:00",
+    "last_severity": 7,
+    "last_title": "Trash Fire",
+    "last_lat": 33.425031788806,
+    "last_lng": -111.933970200807,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpPqG05vZ1S3vmMRB0F": {
+    "first_seen": "2026-04-05T01:20:22.910766+00:00",
+    "last_seen": "2026-04-05T01:21:53.215684+00:00",
+    "last_severity": 6,
+    "last_title": "Vehicle Collision Involving Bicyclist",
+    "last_lat": 33.340606922102,
+    "last_lng": -111.859010613349,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpPnAvDtkgD1GI30UEI": {
+    "first_seen": "2026-04-05T01:20:22.910766+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 4,
+    "last_title": "Man Trespassing at Element Mail Bar",
+    "last_lat": 33.465756,
+    "last_lng": -112.06566,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpPdKyM3Po9iQEVydGy": {
+    "first_seen": "2026-04-05T01:20:22.910766+00:00",
+    "last_seen": "2026-04-05T01:21:53.215684+00:00",
+    "last_severity": 7,
+    "last_title": "People Fighting",
+    "last_lat": 33.477394,
+    "last_lng": -112.012944,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpPK4f0CLGO5Nk9NMJX": {
+    "first_seen": "2026-04-05T01:20:22.910766+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 4,
+    "last_title": "Property Theft",
+    "last_lat": 33.465696,
+    "last_lng": -112.06427,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpOfQckgZVmja7-mFFb": {
+    "first_seen": "2026-04-05T01:20:22.910766+00:00",
+    "last_seen": "2026-04-05T01:21:53.215684+00:00",
+    "last_severity": 7,
+    "last_title": "Report of Woman Starting Fire in Parking Lot",
+    "last_lat": 33.463428,
+    "last_lng": -112.065004,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpM4ylO7yoUD2lNdDTw": {
+    "first_seen": "2026-04-05T01:20:22.910766+00:00",
+    "last_seen": "2026-04-05T01:21:53.215684+00:00",
+    "last_severity": 3,
+    "last_title": "Report of Asssault",
+    "last_lat": 33.382692194256,
+    "last_lng": -112.077342836222,
+    "status": "resolved",
+    "change_type": "resolved"
+  },
+  "-OpPy5Sq2kUBm1hTOV2L": {
+    "first_seen": "2026-04-05T01:22:31.951647+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 6,
+    "last_title": "Vehicle Collision",
+    "last_lat": 33.46583030569,
+    "last_lng": -112.083382484411,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpPF3pV7mGY3Jj97eLe": {
+    "first_seen": "2026-04-05T01:22:31.951647+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 1,
+    "last_title": "Person Stealing From Circle K",
+    "last_lat": 33.304682450045,
+    "last_lng": -112.013905407867,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpP5tR0gYwnHCma6RWI": {
+    "first_seen": "2026-04-05T01:22:31.951647+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 7,
+    "last_title": "People Fighting",
+    "last_lat": 33.467052,
+    "last_lng": -112.073685,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpNZh7EnF0hjx9kaWoA": {
+    "first_seen": "2026-04-05T01:22:31.951647+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 4,
+    "last_title": "Group of Six Trespassing on Sidewalk",
+    "last_lat": 33.461879,
+    "last_lng": -112.078003,
+    "status": "active",
+    "change_type": "stable"
+  },
+  "-OpMRNWnDqiAZeNGFa5Q": {
+    "first_seen": "2026-04-05T01:22:31.951647+00:00",
+    "last_seen": "2026-04-05T01:23:32.264433+00:00",
+    "last_severity": 7,
+    "last_title": "People Fighting",
+    "last_lat": 33.460762,
+    "last_lng": -112.082734,
+    "status": "active",
+    "change_type": "stable"
+  }
+}
