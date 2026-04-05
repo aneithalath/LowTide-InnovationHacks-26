@@ -1,26 +1,32 @@
 {
-  "generated_at": "2026-04-05T04:46:46.362857+00:00",
+  "generated_at": "2026-04-05T05:11:22.224437+00:00",
   "context_note": "STABLE CYCLE - no new escalations this interval",
-  "trigger_tier": null,
-  "trigger_reasons": [],
+  "trigger_tier": "critical",
+  "trigger_reasons": [
+    "New severity-7 incident: People Fighting",
+    "New severity-7 incident: Man Critically Hurt in Residence Fire",
+    "New severity-7 incident: Grass Fire",
+    "New severity-7 incident: House Fire",
+    "New severity-7 incident: House Fire"
+  ],
   "overall_risk_level": "MODERATE",
   "situation": {
     "total_active_incidents": 50,
-    "new_or_escalated_this_cycle": 2,
-    "resolved_this_cycle": 7,
+    "new_or_escalated_this_cycle": 1,
+    "resolved_this_cycle": 10,
     "units_available": 37,
     "units_deployed": 0,
-    "weather": "broken clouds, 79F, no alerts"
+    "weather": "broken clouds, 78F, no alerts"
   },
   "delta_incidents": [
     {
-      "id": "-OpQ24snpzWsNqIpUyTY",
-      "title": "Man Arguing With Woman in Parking Lot at Jamba Juice",
+      "id": "-OpMfsG3NoF2ll0bYT5n",
+      "title": "Ford Focus Involved in Hit-and-Run Crash Near McDonald's",
       "type": "unknown",
-      "normalized_severity": 3,
-      "lat": 33.483845,
-      "lng": -112.077612,
-      "description": "Officers are en route to the scene to investigate the reported disturbance.",
+      "normalized_severity": 6,
+      "lat": 33.480700572711,
+      "lng": -111.985731149086,
+      "description": "Police have received a report of a hit-and-run crash involving a Ford Focus near McDonald's.",
       "change_type": "new"
     }
   ],
@@ -37,53 +43,50 @@
   "top_3_zones": [
     {
       "rank": 1,
-      "zone_id": "grid_33.425_-111.940",
-      "composite_risk_score": 0.5785,
-      "risk_drivers": [
-        "1 active incidents within 0.5mi (max severity: 7)",
-        "Event: SPRING RETURNS TO MILL AVENUE WITH TEMPE FESTIVAL OF THE ARTS MARCH 13-15",
-        "Historical baseline risk weight 0.69"
-      ],
-      "incident_count_nearby": 1,
-      "recommended_action": "Dispatch P-305 to grid_33.425_-111.940",
-      "nearest_unit": "P-305"
-    },
-    {
-      "rank": 2,
-      "zone_id": "grid_33.420_-111.930",
-      "composite_risk_score": 0.558,
-      "risk_drivers": [
-        "1 active incidents within 0.5mi (max severity: 7)",
-        "Event: Desert Financial Arena - Grokipedia, est. 14,198 attendees within 0.4mi",
-        "Historical baseline risk weight 0.49"
-      ],
-      "incident_count_nearby": 1,
-      "recommended_action": "Dispatch P-212 to grid_33.420_-111.930",
-      "nearest_unit": "P-212"
-    },
-    {
-      "rank": 3,
-      "zone_id": "grid_33.425_-111.935",
-      "composite_risk_score": 0.553,
+      "zone_id": "grid_33.430_-111.930",
+      "composite_risk_score": 0.5345,
       "risk_drivers": [
         "1 active incidents within 0.5mi (max severity: 7)",
         "Event: 2026 Fan Fest - Sun Devil Athletics, est. 49,311 attendees within 0.4mi"
       ],
       "incident_count_nearby": 1,
-      "recommended_action": "Dispatch P-104 to grid_33.425_-111.935",
-      "nearest_unit": "P-104"
+      "recommended_action": "Dispatch TEMPE-AMB-03 to grid_33.430_-111.930",
+      "nearest_unit": "TEMPE-AMB-03"
+    },
+    {
+      "rank": 2,
+      "zone_id": "grid_33.395_-111.975",
+      "composite_risk_score": 0.512,
+      "risk_drivers": [
+        "1 active incidents within 0.5mi (max severity: 10)",
+        "Risk area pressure: Pinnacle Charter School crowd modifier 0.60"
+      ],
+      "incident_count_nearby": 1,
+      "recommended_action": "Dispatch TEMPE-AMB-01 to grid_33.395_-111.975",
+      "nearest_unit": "TEMPE-AMB-01"
+    },
+    {
+      "rank": 3,
+      "zone_id": "grid_33.465_-112.065",
+      "composite_risk_score": 0.503,
+      "risk_drivers": [
+        "3 active incidents within 0.5mi (max severity: 10)"
+      ],
+      "incident_count_nearby": 3,
+      "recommended_action": "Dispatch P-302 to grid_33.465_-112.065",
+      "nearest_unit": "P-302"
     }
   ],
   "traffic_concern": [
     {
       "label": "ASU Campus / Palm Walk",
-      "congestion_score": 0.19
+      "congestion_score": 0.32
     }
   ],
   "recommended_actions": [
-    "Dispatch P-305 to grid_33.425_-111.940",
-    "Dispatch P-212 to grid_33.420_-111.930",
-    "Dispatch P-104 to grid_33.425_-111.935"
+    "Dispatch TEMPE-AMB-03 to grid_33.430_-111.930",
+    "Dispatch TEMPE-AMB-01 to grid_33.395_-111.975",
+    "Dispatch P-302 to grid_33.465_-112.065"
   ],
   "vehicle_data_available": true
 }

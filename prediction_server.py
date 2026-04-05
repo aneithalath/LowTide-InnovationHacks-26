@@ -5,6 +5,7 @@ import json
 import math
 import os
 import re
+import subprocess
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -67,6 +68,8 @@ GRAPH_PATH = PROJECT_ROOT / 'data_collection' / 'data' / 'tempe_road_graph.graph
 EMERGENCY_SNAPSHOT_PATH = (
     PROJECT_ROOT / 'data_collection' / 'data' / 'emergency_vehicle_state.json'
 )
+GEMINI_BRIEF_PATH = PROJECT_ROOT / 'data_collection' / 'data' / 'gemini_brief.json'
+COLLECTOR_SCRIPT_PATH = PROJECT_ROOT / 'data_collection' / 'collector.py'
 PREDICTION_SNAPSHOT_PATH = (
     PROJECT_ROOT / 'data_collection' / 'data' / 'prediction_snapshot.json'
 )
@@ -400,6 +403,192 @@ _prediction_response_lock = Lock()
 # ─────────────────────────────────────────────────────────────────
 # UTILITY FUNCTIONS
 # ─────────────────────────────────────────────────────────────────
+
+def _collector_once_timeout_seconds() -> int:
+    raw_timeout = os.getenv('COLLECTOR_ONCE_TIMEOUT_SECONDS', '120').strip()
+    try:
+        return max(15, int(raw_timeout))
+    except ValueError:
+        return 120
+
+
+def _run_collector_once() -> bool:
+    if not COLLECTOR_SCRIPT_PATH.exists():
+        print(f'[ERROR] collector script not found at {COLLECTOR_SCRIPT_PATH}', file=sys.stderr)
+        return False
+
+    try:
+        subprocess.run(
+            [sys.executable, str(COLLECTOR_SCRIPT_PATH), '--once'],
+            cwd=str(PROJECT_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=_collector_once_timeout_seconds(),
+            check=True,
+        )
+        return True
+    except subprocess.TimeoutExpired:
+        print('[ERROR] collector one-shot run timed out before writing fresh risk data.', file=sys.stderr)
+    except subprocess.CalledProcessError as exc:
+        stderr = (exc.stderr or '').strip() or 'no stderr output'
+        print(f'[ERROR] collector one-shot run failed: {stderr}', file=sys.stderr)
+    except Exception as exc:
+        print(f'[ERROR] unexpected collector one-shot failure: {exc}', file=sys.stderr)
+
+    return False
+
+
+def _parse_grid_zone_coordinates(zone_id: object) -> tuple[float, float] | None:
+    zone_text = str(zone_id or '').strip()
+    if not zone_text:
+        return None
+    match = re.search(r'grid_(-?\d+(?:\.\d+)?)_(-?\d+(?:\.\d+)?)', zone_text)
+    if not match:
+        return None
+    latitude = _to_float(match.group(1))
+    longitude = _to_float(match.group(2))
+    if latitude is None or longitude is None:
+        return None
+    return latitude, longitude
+
+
+def _brief_delta_to_incident(delta_incident: dict, index: int) -> dict | None:
+    latitude = _to_float(delta_incident.get('lat'))
+    longitude = _to_float(delta_incident.get('lng'))
+    if latitude is None or longitude is None:
+        return None
+
+    incident_id = str(delta_incident.get('id') or f'gemini_delta_{index}').strip()
+    title = str(delta_incident.get('title') or f'Brief incident {index}').strip()
+    change_type = str(delta_incident.get('change_type') or 'stable').strip().lower()
+    severity = max(0, min(10, int(_to_float(delta_incident.get('normalized_severity')) or 0)))
+    description = str(delta_incident.get('description') or '').strip()
+
+    reports = [
+        f'Gemini brief delta incident signal: {title}',
+        f'Change type: {change_type} | normalized_severity={severity}',
+    ]
+    if description:
+        reports.append(f'Brief description: {description}')
+
+    return {
+        'id': incident_id,
+        'location_name': title,
+        'coordinates': {'latitude': latitude, 'longitude': longitude},
+        'reports': reports,
+        'source_api': 'Gemini Brief Delta Incidents',
+        'source_data_type': 'real',
+        'api_key_name': None,
+        'fake_score': round(min(max(severity / 10.0, 0.0), 1.0), 2),
+    }
+
+
+def _brief_zone_to_incident(zone: dict, index: int, recommended_actions: list[str]) -> dict | None:
+    latitude = _to_float(zone.get('lat'))
+    longitude = _to_float(zone.get('lng'))
+    if latitude is None or longitude is None:
+        parsed_coordinates = _parse_grid_zone_coordinates(zone.get('zone_id'))
+        if parsed_coordinates is None:
+            return None
+        latitude, longitude = parsed_coordinates
+
+    zone_id = str(zone.get('zone_id') or f'zone_{index}').strip()
+    score = max(0.0, min(1.0, float(_to_float(zone.get('composite_risk_score')) or 0.0)))
+    incident_count = int(_to_float(zone.get('incident_count_nearby')) or 0)
+    risk_drivers_payload = zone.get('risk_drivers') if isinstance(zone.get('risk_drivers'), list) else []
+    risk_drivers = [str(driver).strip() for driver in risk_drivers_payload if str(driver).strip()]
+    recommended_action = str(zone.get('recommended_action') or '').strip()
+
+    reports = [
+        f'Gemini brief top risk zone: {zone_id} | composite_risk_score={score:.2f}',
+        f'Nearby incident count around zone: {incident_count}',
+    ]
+    if risk_drivers:
+        reports.append('Risk drivers: ' + ' | '.join(risk_drivers[:4]))
+    if recommended_action:
+        reports.append(f'Zone recommended action: {recommended_action}')
+    if recommended_actions:
+        reports.append('Brief recommended actions: ' + ' | '.join(recommended_actions[:3]))
+
+    return {
+        'id': f'gemini_zone_{index}_{zone_id}',
+        'location_name': zone_id,
+        'coordinates': {'latitude': latitude, 'longitude': longitude},
+        'reports': reports,
+        'source_api': 'Gemini Brief Top 3 Zones',
+        'source_data_type': 'real',
+        'api_key_name': None,
+        'fake_score': round(score, 2),
+    }
+
+
+def _build_incidents_from_gemini_brief(brief_payload: dict) -> list[dict]:
+    delta_incidents_payload = (
+        brief_payload.get('delta_incidents') if isinstance(brief_payload.get('delta_incidents'), list) else []
+    )
+    top_zones_payload = (
+        brief_payload.get('top_3_zones') if isinstance(brief_payload.get('top_3_zones'), list) else []
+    )
+    recommended_actions_payload = (
+        brief_payload.get('recommended_actions')
+        if isinstance(brief_payload.get('recommended_actions'), list)
+        else []
+    )
+    recommended_actions = [str(action).strip() for action in recommended_actions_payload if str(action).strip()]
+
+    incidents: list[dict] = []
+    seen_ids: set[str] = set()
+
+    for index, delta_incident_payload in enumerate(delta_incidents_payload, start=1):
+        if not isinstance(delta_incident_payload, dict):
+            continue
+        incident = _brief_delta_to_incident(delta_incident_payload, index)
+        if incident is None:
+            continue
+        incident_id_key = str(incident['id']).casefold()
+        if incident_id_key in seen_ids:
+            continue
+        seen_ids.add(incident_id_key)
+        incidents.append(incident)
+
+    for index, zone_payload in enumerate(top_zones_payload, start=1):
+        if not isinstance(zone_payload, dict):
+            continue
+        incident = _brief_zone_to_incident(zone_payload, index, recommended_actions)
+        if incident is None:
+            continue
+        incident_id_key = str(incident['id']).casefold()
+        if incident_id_key in seen_ids:
+            continue
+        seen_ids.add(incident_id_key)
+        incidents.append(incident)
+
+    return incidents
+
+
+def _load_incidents_from_gemini_brief() -> list[dict]:
+    if not GEMINI_BRIEF_PATH.exists():
+        return []
+    try:
+        payload = json.loads(GEMINI_BRIEF_PATH.read_text(encoding='utf-8'))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(payload, dict):
+        return []
+    return _build_incidents_from_gemini_brief(payload)
+
+
+def _runtime_incident_source() -> list[dict]:
+    _run_collector_once()
+    incidents_from_brief = _load_incidents_from_gemini_brief()
+    if incidents_from_brief:
+        return incidents_from_brief
+
+    print(
+        '[WARN] Falling back to static incident source because gemini_brief risk events were unavailable.',
+        file=sys.stderr,
+    )
+    return INCIDENTS_SOURCE
 
 def _normalize_vehicle_status(raw_status: object) -> str:
     status = str(raw_status or '').strip().lower()
@@ -1290,7 +1479,7 @@ def _update_live_predictions() -> list[dict]:
 
     results = []
     live_vehicles = _load_live_emergency_vehicles()
-    for inc in INCIDENTS_SOURCE:
+    for inc in _runtime_incident_source():
         res = _call_llm_prediction(inc, live_vehicles)
         if res:
             results.append(res)

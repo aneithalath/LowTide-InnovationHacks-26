@@ -1,14 +1,20 @@
 {
-  "evaluated_at": "2026-04-05T04:46:16.372563+00:00",
-  "triggered": false,
-  "ready_to_send_gemini": false,
-  "severity_tier": "none",
-  "reasons": [],
+  "evaluated_at": "2026-04-05T05:11:22.453520+00:00",
+  "triggered": true,
+  "ready_to_send_gemini": true,
+  "triggered_at": "2026-04-05T05:11:22.453520+00:00",
+  "severity_tier": "critical",
+  "reasons": [
+    "New severity-7 incident: People Fighting",
+    "New severity-7 incident: Man Critically Hurt in Residence Fire",
+    "New severity-7 incident: Grass Fire",
+    "New severity-7 incident: House Fire",
+    "New severity-7 incident: House Fire"
+  ],
   "gemini_input_path": "data_collection/data/gemini_brief.json",
+  "brief_hash": "f6ba33fd68c5e51f26b78d752df0c8fd8e91f97952d4a873b4a123caaf366c0a",
+  "status": "trigger conditions met",
   "consumed": false,
-  "status": "no trigger conditions met",
-  "last_triggered_at": "2026-04-05T04:45:16.379048+00:00",
-  "last_trigger_tier": "critical",
   "dashboard_alert_active": true,
   "dashboard_alert_count": 5,
   "dashboard_alerts": [
@@ -16,36 +22,31 @@
       "id": "-OpOjCHB5DgvvmDo1ESb",
       "severity": 10,
       "title": "Report of Person Shot, Officers on Scene",
-      "last_seen": "2026-04-05T04:45:46.394851+00:00"
+      "last_seen": "2026-04-05T05:11:22.247191+00:00"
     },
     {
       "id": "-OpLvdeq4RiW8HClHzy_",
       "severity": 10,
       "title": "Report of Six Shots Fired",
-      "last_seen": "2026-04-05T04:45:46.394851+00:00"
+      "last_seen": "2026-04-05T05:11:22.247191+00:00"
     },
     {
       "id": "-OpLQ6FDgp1vKuSTdmdu",
       "severity": 10,
       "title": "Report of Shooting",
-      "last_seen": "2026-04-05T04:45:46.394851+00:00"
+      "last_seen": "2026-04-05T05:11:22.247191+00:00"
+    },
+    {
+      "id": "-OpQdZToTs9wIJJOgbSS",
+      "severity": 10,
+      "title": "Report of Five Shots Fired",
+      "last_seen": "2026-04-05T05:11:22.247191+00:00"
     },
     {
       "id": "-OpPWmdhtae_MADmIQ5b",
       "severity": 8,
       "title": "Person Trapped Following Collision",
-      "last_seen": "2026-04-05T04:45:46.394851+00:00"
-    },
-    {
-      "id": "-OpMLMqe7FoZmx47BZlk",
-      "severity": 7,
-      "title": "Report of Man With Gun Involved in Fight",
-      "last_seen": "2026-04-05T04:45:46.394851+00:00"
+      "last_seen": "2026-04-05T05:11:22.247191+00:00"
     }
-  ],
-  "reason_counts": {
-    "critical": 0,
-    "high": 0,
-    "moderate": 0
-  }
+  ]
 }

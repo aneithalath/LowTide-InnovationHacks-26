@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import copy
 import json
 import os
@@ -8,7 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from apscheduler.schedulers.blocking import BlockingScheduler
 from dotenv import load_dotenv
 
 from cameras_data import fetch_cameras
@@ -216,7 +216,9 @@ def _startup_bootstrap() -> None:
     _job_gemini_trigger()
 
 
-def _configure_scheduler() -> BlockingScheduler:
+def _configure_scheduler() -> Any:
+    from apscheduler.schedulers.blocking import BlockingScheduler
+
     scheduler = BlockingScheduler()
 
     scheduler.add_job(_job_incidents, "interval", minutes=2, id="incidents", max_instances=1, coalesce=True)
@@ -232,11 +234,23 @@ def _configure_scheduler() -> BlockingScheduler:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="LowTide data collector")
+    parser.add_argument(
+        "--once",
+        action="store_true",
+        help="Run a single collection cycle and exit.",
+    )
+    args = parser.parse_args()
+
     _ensure_data_dir()
     _print_key_status()
     _log("risk_engine: active")
     _startup_bootstrap()
     _save_world_state()
+
+    if args.once:
+        _log("collector single-cycle run complete")
+        return
 
     scheduler = _configure_scheduler()
     _log("collector started: scheduler running")
