@@ -19,29 +19,10 @@ CACHE_PATH = DATA_DIR / "events_cache.json"
 RISK_AREAS_CACHE_PATH = DATA_DIR / "risk_areas_cache.json"
 
 EXA_QUERIES = [
-    # General events with structured info
-    "events in Tempe Arizona this week schedule location attendance crowd size",
-    
-    # Daily / near-term events (captures nightlife, pop-ups, smaller crowds too)
-    "things happening in Tempe AZ today or tonight event schedule attendance downtown Tempe Mill Avenue",
-    
-    # ASU-driven high-density events
-    "Arizona State University Tempe campus events this week schedule large events attendance graduation sports games",
-    
-    # Sports + major gatherings (high crowd signal)
-    "Tempe Arizona sports events schedule stadium games attendance Sun Devil Stadium Desert Financial Arena crowd size",
-    
-    # Festivals, concerts, public gatherings
-    "Tempe AZ festivals concerts parades public events this weekend attendance expected crowd size",
-    
-    # Religious + community gatherings (often missed but important)
-    "Tempe Arizona church events community gatherings weekend schedule attendance large services",
-    
-    # City / official + permits (best signal for large planned events)
-    "city of Tempe event calendar permits street closures large events attendance expected",
-    
-    # Event platforms (structured listings)
-    "Tempe AZ events Eventbrite Meetup Facebook events attendance RSVP count",
+    "Sun Devil Stadium ASU game concert event 2026 tickets attendance expected",
+    "Desert Financial Arena Tempe event 2026 sold out capacity crowd",
+    "Tempe Beach Park Mill Avenue festival concert 2026 attendance expected",
+    "ASU Gammage Broadway show 2026 capacity audience tickets",
 ]
 
 VENUE_CAPACITY = {
@@ -177,18 +158,70 @@ def extract_crowd(text: str) -> int | None:
     if not text:
         return None
 
+    exclusion_patterns = [
+        r"\d[\d,]+\s*students",
+        r"\d[\d,]+\s*faculty",
+        r"\d[\d,]+\s*employees",
+        r"\d[\d,]+\s*alumni",
+        r"\d[\d,]+\s*square\s*feet",
+        r"\d[\d,]+\s*acres",
+        r"enroll\w*\s*\d[\d,]+",
+        r"\d[\d,]+\s*enroll",
+    ]
+
+    clean_text = text
+    for exc in exclusion_patterns:
+        clean_text = re.sub(exc, "", clean_text, flags=re.IGNORECASE)
+
     patterns = [
-        r"(\d[\d,]+)\s*(?:people|attendees|fans|guests|expected|capacity|tickets)",
-        r"(?:expected|estimated|capacity|attendance)[^\d]*(\d[\d,]+)",
-        r"(\d[\d,]+)\s*(?:seat|person)",
+        r"(\d[\d,]+)\s*(?:people|attendees|fans|guests|spectators)\s*(?:expected|anticipated|attend)",
+        r"(?:expected|estimated|anticipated)\s+(?:attendance|crowd|turnout)[^\d]*(\d[\d,]+)",
+        r"(?:seats?|capacity)[^\d]*(\d[\d,]+)",
+        r"(\d[\d,]+)\s*(?:tickets?\s*(?:sold|available|remaining))",
+        r"(\d[\d,]+)\s*(?:fans|attendees|guests)\s*(?:will|are\s*expected)",
     ]
 
     for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
+        match = re.search(pattern, clean_text, re.IGNORECASE)
         if match:
-            return int(match.group(1).replace(",", ""))
+            value = int(match.group(1).replace(",", ""))
+            if 50 <= value <= 100000:
+                return value
 
     return None
+
+
+def extract_event_name(result_title: str, result_text: str | None) -> str:
+    """Try to extract a specific event name rather than a generic page title."""
+    generic_titles = [
+        "upcoming",
+        "events",
+        "calendar",
+        "schedule",
+        "what's on",
+        "things to do",
+        "activities",
+        "news",
+        "home",
+    ]
+    title = str(result_title or "Unnamed Event").strip()
+    title_lower = title.lower()
+
+    if not any(token in title_lower for token in generic_titles) and len(title) > 10:
+        return title
+
+    if result_text:
+        lines = result_text.split("\n")
+        for line in lines[:20]:
+            candidate = line.strip()
+            if not (10 < len(candidate) < 80):
+                continue
+            if any(token in candidate.lower() for token in generic_titles):
+                continue
+            if any(ch.isupper() for ch in candidate):
+                return candidate
+
+    return title
 
 
 def _estimate_crowd(venue_name: str, event_type: str) -> int:
@@ -329,6 +362,7 @@ def fetch_events_data() -> list[dict[str, Any]]:
                 if not url:
                     continue
                 text = str(_obj_get(row, "text") or "")
+                name = extract_event_name(title, text)
                 start_time = str(_obj_get(row, "published_date") or datetime.now(UTC).isoformat())
                 event_type = _infer_event_type(f"{query} {title}")
 
@@ -363,7 +397,7 @@ def fetch_events_data() -> list[dict[str, Any]]:
                 merged.append(
                     Event(
                         event_id=event_id,
-                        name=title,
+                        name=name,
                         type=event_type,
                         lat=_parse_float(matched_venue.get("lat")),
                         lng=_parse_float(matched_venue.get("lng")),

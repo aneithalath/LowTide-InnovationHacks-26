@@ -714,20 +714,61 @@ def _build_gemini_brief(
     situation = payload.get("situation_summary") if isinstance(payload.get("situation_summary"), dict) else {}
     top_zones = payload.get("top_risk_zones") if isinstance(payload.get("top_risk_zones"), list) else []
 
-    brief_incidents = sorted(
+    context_note = (
+        "TRIGGERED UPDATE" if payload.get("trigger_tier") else "STABLE CYCLE - no new escalations this interval"
+    )
+
+    # Priority 1: new or escalated incidents this cycle.
+    delta_incs = sorted(
         [item for item in delta_incidents if _safe_int(item.get("normalized_severity"), 0) >= 3],
         key=lambda item: _safe_int(item.get("normalized_severity"), 0),
         reverse=True,
-    )[:3]
-    brief_incidents = [
-        {
-            "id": item.get("id"),
-            "title": item.get("title"),
-            "normalized_severity": _safe_int(item.get("normalized_severity"), 0),
-            "change_type": item.get("change_type"),
+    )[:5]
+
+    # Priority 2: if no deltas, include top active incidents by severity.
+    if not delta_incs:
+        active_incidents = payload.get("active_incidents") if isinstance(payload.get("active_incidents"), list) else []
+
+        zone_points: list[dict[str, float]] = []
+        for zone in top_zones[:3]:
+            if not isinstance(zone, dict):
+                continue
+            z_lat = _safe_float(zone.get("lat"))
+            z_lng = _safe_float(zone.get("lng"))
+            if z_lat is None or z_lng is None:
+                continue
+            zone_points.append({"lat": z_lat, "lng": z_lng})
+
+        def _distance_to_top_zones(incident: dict[str, Any]) -> float:
+            i_lat = _safe_float(incident.get("lat"))
+            i_lng = _safe_float(incident.get("lng"))
+            if i_lat is None or i_lng is None or not zone_points:
+                return float("inf")
+            point = {"lat": i_lat, "lng": i_lng}
+            return min(haversine(point, zone_point) for zone_point in zone_points)
+
+        delta_incs = sorted(
+            [item for item in active_incidents if isinstance(item, dict) and _safe_int(item.get("normalized_severity"), 0) >= 3],
+            key=lambda item: (
+                -_safe_int(item.get("normalized_severity"), 0),
+                _distance_to_top_zones(item),
+            ),
+        )[:5]
+        delta_incs = [{**item, "change_type": str(item.get("change_type") or "stable")} for item in delta_incs]
+
+    def _slim_incident(inc: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "id": inc.get("id"),
+            "title": inc.get("title"),
+            "type": inc.get("type"),
+            "normalized_severity": _safe_int(inc.get("normalized_severity"), 0),
+            "lat": _safe_float(inc.get("lat"), 0.0) or 0.0,
+            "lng": _safe_float(inc.get("lng"), 0.0) or 0.0,
+            "description": str(inc.get("description") or "")[:150],
+            "change_type": str(inc.get("change_type") or "stable"),
         }
-        for item in brief_incidents
-    ]
+
+    brief_incidents = [_slim_incident(item) for item in delta_incs]
 
     slim_zones: list[dict[str, Any]] = []
     for zone in top_zones[:3]:
@@ -745,7 +786,7 @@ def _build_gemini_brief(
                 "rank": zone.get("rank"),
                 "zone_id": zone.get("zone_id"),
                 "composite_risk_score": zone.get("composite_risk_score"),
-                "primary_driver": (zone.get("risk_drivers") if isinstance(zone.get("risk_drivers"), list) else [None])[0],
+                "risk_drivers": [str(driver)[:80] for driver in (zone.get("risk_drivers") if isinstance(zone.get("risk_drivers"), list) else [])[:4]],
                 "incident_count_nearby": len(zone.get("nearby_incidents") if isinstance(zone.get("nearby_incidents"), list) else []),
                 "recommended_action": zone.get("recommended_action", ""),
                 "nearest_unit": nearest_unit_code,
@@ -788,8 +829,9 @@ def _build_gemini_brief(
         if isinstance(action, dict) and str(action.get("action") or "").strip()
     ]
 
-    return {
+    brief_payload = {
         "generated_at": payload.get("generated_at"),
+        "context_note": context_note,
         "trigger_tier": payload.get("trigger_tier"),
         "trigger_reasons": payload.get("trigger_reasons", []),
         "overall_risk_level": situation.get("overall_risk_level"),
@@ -808,6 +850,30 @@ def _build_gemini_brief(
         "recommended_actions": slim_actions,
         "vehicle_data_available": payload.get("vehicle_data_available"),
     }
+
+    def _line_count(value: dict[str, Any]) -> int:
+        return len(json.dumps(value, indent=2).splitlines())
+
+    if _line_count(brief_payload) > 100:
+        brief_payload["delta_incidents"] = brief_payload.get("delta_incidents", [])[:4]
+
+    if _line_count(brief_payload) > 100:
+        brief_payload["delta_incidents"] = brief_payload.get("delta_incidents", [])[:3]
+
+    if _line_count(brief_payload) > 100:
+        brief_payload["top_3_zones"] = [
+            {
+                **zone,
+                "risk_drivers": (zone.get("risk_drivers") if isinstance(zone.get("risk_drivers"), list) else [])[:2],
+            }
+            for zone in brief_payload.get("top_3_zones", [])
+            if isinstance(zone, dict)
+        ]
+
+    if _line_count(brief_payload) > 100:
+        brief_payload["recommended_actions"] = brief_payload.get("recommended_actions", [])[:2]
+
+    return brief_payload
 
 
 def run_risk_engine() -> dict[str, Any]:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
@@ -22,25 +23,27 @@ TRIGGER_TIERS = {
     "critical": {
         "cooldown_seconds": 0,
         "conditions": [
-            "New incident with normalized severity >= 8",
-            "Weather alert changed from null to non-null",
-            "4 or more units simultaneously dispatched",
+            "Active incident with normalized_severity >= 7",
+            "Weather alert activated",
+            "4+ units deployed simultaneously",
         ],
     },
     "high": {
-        "cooldown_seconds": 180,
+        "cooldown_seconds": 120,
         "conditions": [
-            "New incident with normalized severity 6-7",
-            "Congestion crossed 0.85 near a hotspot",
-            "Incident cluster detected",
+            "New or escalated incident with severity 5-6",
+            "Congestion crossed 0.85 near hotspot",
+            "Incident cluster: 3+ within 0.05 deg",
+            "Event with crowd >= 5,000 starting within 90 min",
         ],
     },
     "moderate": {
-        "cooldown_seconds": 600,
+        "cooldown_seconds": 300,
         "conditions": [
-            "Total incident count increased by 5 or more since last snapshot",
-            "Congestion crossed 0.75 near a hotspot",
-            "Large event starting within 90 minutes",
+            "Incident count increased by 3+",
+            "Congestion crossed 0.75 near hotspot",
+            "Event with crowd >= 2,000 starting within 90 min",
+            "Periodic baseline: 10 min elapsed with active incidents",
         ],
     },
 }
@@ -77,6 +80,15 @@ def _load_json(path: Path) -> Any:
         return json.load(handle)
 
 
+def _hash_file(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except Exception:
+        return None
+
+
 def _write_json(path: Path, payload: Any, temp_name: str) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     temp_path = path.with_name(temp_name)
@@ -101,6 +113,38 @@ def _safe_int(value: Any, fallback: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return fallback
+
+
+def _build_dashboard_alerts(incident_state: dict[str, Any], min_severity: int = 5) -> list[dict[str, Any]]:
+    active_alerts: list[dict[str, Any]] = []
+
+    for incident_id, row in incident_state.items():
+        if not isinstance(row, dict):
+            continue
+        if row.get("status") != "active":
+            continue
+
+        severity = _safe_int(row.get("last_severity"), 0)
+        if severity < min_severity:
+            continue
+
+        active_alerts.append(
+            {
+                "id": incident_id,
+                "severity": severity,
+                "title": str(row.get("last_title") or "incident"),
+                "last_seen": str(row.get("last_seen") or ""),
+            }
+        )
+
+    active_alerts.sort(
+        key=lambda item: (
+            _safe_int(item.get("severity"), 0),
+            str(item.get("last_seen") or ""),
+        ),
+        reverse=True,
+    )
+    return active_alerts[:5]
 
 
 def _distance_deg(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -244,11 +288,11 @@ def _build_current_state(world_state: dict[str, Any], now_utc: datetime) -> dict
         start_label = str(event.get("start_time") or "")
         meta = f"{name} ({crowd}) at {start_label}"
 
-        if crowd >= 10000:
+        if crowd >= 5000:
             high_event_keys.add(key)
             high_event_meta[key] = meta
 
-        if crowd >= 5000:
+        if crowd >= 2000:
             moderate_event_keys.add(key)
             moderate_event_meta[key] = meta
 
@@ -274,27 +318,43 @@ def _seconds_since_last_trigger(last_trigger_at: str | None, now_utc: datetime) 
     return max((now_utc - parsed).total_seconds(), 0.0)
 
 
-def _build_trigger_payload(tier: str, reasons: list[str], now_utc: datetime) -> dict[str, Any]:
+def _build_trigger_payload(
+    tier: str,
+    reasons: list[str],
+    now_utc: datetime,
+    ready_to_send_gemini: bool,
+    brief_hash: str | None,
+    status: str,
+    dashboard_alerts: list[dict[str, Any]],
+) -> dict[str, Any]:
     return {
         "evaluated_at": now_utc.isoformat(),
         "triggered": True,
+        "ready_to_send_gemini": ready_to_send_gemini,
         "triggered_at": now_utc.isoformat(),
         "severity_tier": tier,
         "reasons": reasons,
         "gemini_input_path": "data_collection/data/gemini_brief.json",
+        "brief_hash": brief_hash,
+        "status": status,
         "consumed": False,
+        "dashboard_alert_active": bool(dashboard_alerts),
+        "dashboard_alert_count": len(dashboard_alerts),
+        "dashboard_alerts": dashboard_alerts,
     }
 
 
 def _build_no_trigger_payload(
     now_utc: datetime,
     previous_snapshot: dict[str, Any],
+    dashboard_alerts: list[dict[str, Any]],
     reason_counts: dict[str, int] | None = None,
     status: str = "no trigger conditions met",
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "evaluated_at": now_utc.isoformat(),
         "triggered": False,
+        "ready_to_send_gemini": False,
         "severity_tier": "none",
         "reasons": [],
         "gemini_input_path": "data_collection/data/gemini_brief.json",
@@ -302,6 +362,9 @@ def _build_no_trigger_payload(
         "status": status,
         "last_triggered_at": previous_snapshot.get("last_trigger_at"),
         "last_trigger_tier": previous_snapshot.get("last_trigger_tier"),
+        "dashboard_alert_active": bool(dashboard_alerts),
+        "dashboard_alert_count": len(dashboard_alerts),
+        "dashboard_alerts": dashboard_alerts,
     }
 
     if reason_counts is not None:
@@ -409,10 +472,14 @@ def evaluate_trigger() -> bool:
     now_utc = datetime.now(timezone.utc)
 
     world_state = _load_json(WORLD_STATE_PATH)
+    incident_state_now = _load_incident_state()
+    dashboard_alerts = _build_dashboard_alerts(incident_state_now, min_severity=5)
+
     if not isinstance(world_state, dict):
         fallback_payload = _build_no_trigger_payload(
             now_utc,
             previous_snapshot={},
+            dashboard_alerts=dashboard_alerts,
             status="world_state missing or invalid",
         )
         _write_json(TRIGGER_PATH, fallback_payload, "gemini_trigger.tmp")
@@ -421,6 +488,10 @@ def evaluate_trigger() -> bool:
     previous_snapshot = _load_json(SNAPSHOT_PATH)
     if not isinstance(previous_snapshot, dict):
         previous_snapshot = {}
+
+    previous_trigger_payload = _load_json(TRIGGER_PATH)
+    if not isinstance(previous_trigger_payload, dict):
+        previous_trigger_payload = {}
 
     current_state = _build_current_state(world_state, now_utc)
 
@@ -438,7 +509,7 @@ def evaluate_trigger() -> bool:
         change = str(incident.get("change_type") or "stable")
         title = str(incident.get("title") or incident.get("type") or "incident")
 
-        if sev >= 8 and (inc_id not in prev_triggered_critical or change == "escalated"):
+        if sev >= 7 and (inc_id not in prev_triggered_critical or change == "escalated"):
             prefix = "Escalated" if change == "escalated" else "New"
             critical_reasons.append(f"{prefix} severity-{sev} incident: {title}")
             new_triggered_critical.add(inc_id)
@@ -454,7 +525,7 @@ def evaluate_trigger() -> bool:
         change = str(incident.get("change_type") or "stable")
         title = str(incident.get("title") or incident.get("type") or "incident")
 
-        if 6 <= sev < 8 and (inc_id not in prev_triggered_high or change == "escalated"):
+        if 5 <= sev < 7 and (inc_id not in prev_triggered_high or change == "escalated"):
             prefix = "Escalated" if change == "escalated" else "New"
             high_reasons.append(f"{prefix} severity-{sev} incident: {title}")
             new_triggered_high.add(inc_id)
@@ -501,7 +572,7 @@ def evaluate_trigger() -> bool:
             )
 
     count_delta = current_state["incident_count"] - _safe_int(previous_snapshot.get("incident_count"), 0)
-    if count_delta >= 5:
+    if count_delta >= 3:
         moderate_reasons.append(f"Incident surge: +{count_delta} since last check")
 
     for road_id, meta in current_state["traffic_near_hotspots"].items():
@@ -520,11 +591,27 @@ def evaluate_trigger() -> bool:
     previous_high_event_keys = set(previous_snapshot.get("high_event_keys") or [])
     for key in set(current_state["high_event_keys"]) - previous_high_event_keys:
         details = current_state["high_event_meta"].get(key, key)
-        moderate_reasons.append(f"Large event starting within 90min: {details}")
+        high_reasons.append(f"Event with crowd >= 5,000 starting within 90min: {details}")
+
+    previous_moderate_event_keys = set(previous_snapshot.get("moderate_event_keys") or [])
+    for key in set(current_state["moderate_event_keys"]) - previous_moderate_event_keys:
+        if key in set(current_state["high_event_keys"]):
+            continue
+        details = current_state["moderate_event_meta"].get(key, key)
+        moderate_reasons.append(f"Event with crowd >= 2,000 starting within 90min: {details}")
+
+    seconds_since_last = _seconds_since_last_trigger(previous_snapshot.get("last_trigger_at"), now_utc)
+
+    # Periodic baseline: fire moderate trigger if 10+ minutes elapsed AND incidents exist.
+    minutes_since_last = seconds_since_last / 60.0
+    if minutes_since_last >= 10.0 and current_state["incident_count"] > 0:
+        moderate_reasons.append(
+            f"Periodic update: {current_state['incident_count']} active incidents, "
+            f"{minutes_since_last:.0f} min since last Gemini call"
+        )
 
     tier_to_fire: str | None = None
     reasons_to_fire: list[str] = []
-    seconds_since_last = _seconds_since_last_trigger(previous_snapshot.get("last_trigger_at"), now_utc)
 
     if critical_reasons:
         tier_to_fire = "critical"
@@ -550,9 +637,9 @@ def evaluate_trigger() -> bool:
         "cluster_detected": cluster_found,
         "last_trigger_at": previous_snapshot.get("last_trigger_at"),
         "last_trigger_tier": previous_snapshot.get("last_trigger_tier"),
+        "last_sent_brief_hash": previous_snapshot.get("last_sent_brief_hash"),
     }
 
-    incident_state_now = _load_incident_state()
     active_ids = {
         incident_id
         for incident_id, value in incident_state_now.items()
@@ -565,6 +652,7 @@ def evaluate_trigger() -> bool:
         no_trigger_payload = _build_no_trigger_payload(
             now_utc,
             previous_snapshot=previous_snapshot,
+            dashboard_alerts=dashboard_alerts,
             reason_counts={
                 "critical": len(critical_reasons),
                 "high": len(high_reasons),
@@ -575,13 +663,47 @@ def evaluate_trigger() -> bool:
         _write_json(SNAPSHOT_PATH, snapshot_payload, "last_trigger_snapshot.tmp")
         return False
 
-    trigger_payload = _build_trigger_payload(tier_to_fire, reasons_to_fire, now_utc)
-    _inject_trigger_into_gemini_files(tier_to_fire, reasons_to_fire)
+    brief_hash = _hash_file(GEMINI_BRIEF_PATH)
+    previous_brief_hash = str(previous_trigger_payload.get("brief_hash") or "")
+    previous_was_trigger = bool(previous_trigger_payload.get("triggered"))
+    previous_consumed = bool(previous_trigger_payload.get("consumed"))
+
+    ready_to_send_gemini = True
+    trigger_status = "trigger conditions met"
+
+    if brief_hash and previous_was_trigger and brief_hash == previous_brief_hash:
+        if previous_consumed:
+            ready_to_send_gemini = False
+            trigger_status = "trigger met but duplicate brief already consumed in prior cycle"
+        else:
+            ready_to_send_gemini = False
+            trigger_status = "trigger met but previous cycle still pending consumption"
+
+    trigger_payload = _build_trigger_payload(
+        tier_to_fire,
+        reasons_to_fire,
+        now_utc,
+        ready_to_send_gemini,
+        brief_hash,
+        trigger_status,
+        dashboard_alerts,
+    )
+
+    if ready_to_send_gemini:
+        _inject_trigger_into_gemini_files(tier_to_fire, reasons_to_fire)
+
     _write_json(TRIGGER_PATH, trigger_payload, "gemini_trigger.tmp")
 
     snapshot_payload["last_trigger_at"] = trigger_payload["triggered_at"]
     snapshot_payload["last_trigger_tier"] = tier_to_fire
+    if ready_to_send_gemini and brief_hash:
+        snapshot_payload["last_sent_brief_hash"] = brief_hash
     _write_json(SNAPSHOT_PATH, snapshot_payload, "last_trigger_snapshot.tmp")
 
-    _log_trigger(tier_to_fire, len(reasons_to_fire))
-    return True
+    if ready_to_send_gemini:
+        _log_trigger(tier_to_fire, len(reasons_to_fire))
+    else:
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"[{timestamp}] gemini trigger: {tier_to_fire.upper()} - suppressed duplicate Gemini send")
+
+    return ready_to_send_gemini
