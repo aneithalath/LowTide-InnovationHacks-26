@@ -1,5 +1,5 @@
 # Wyvern
-Real-time operational intelligence layer for emergency response: stateful risk detection, trigger-gated AI summaries, and actionable dispatch recommendations.
+Real-time AI command system that turns messy incident data into ranked priorities, allocates units, and explains tradeoffs, empowering responders to make faster, smarter decisions under pressure.
 
 
 ## Problem Statement
