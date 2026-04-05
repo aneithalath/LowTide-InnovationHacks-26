@@ -21,7 +21,7 @@ from pydantic import BaseModel
 import uvicorn
 from openai import OpenAI
 
-app = FastAPI(title='LowTide Risk Prediction API', version='1.0.0')
+app = FastAPI(title='Wyvern Risk Prediction API', version='1.0.0')
 
 app.add_middleware(
     CORSMiddleware,

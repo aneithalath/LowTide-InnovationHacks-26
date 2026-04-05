@@ -1,11 +1,13 @@
-# LowTide Sentinel
+# Wyvern
 Real-time operational intelligence layer for emergency response: stateful risk detection, trigger-gated AI summaries, and actionable dispatch recommendations.
+
 
 ## Problem Statement
 Emergency response teams are flooded with fragmented, high-volume feeds (incidents, traffic, weather, events, units). Typical pipelines are stateless, reprocess everything every cycle, and fail to distinguish what is actually new, escalated, or resolved. That creates alert fatigue, inconsistent severity handling, and slower dispatch decisions when minutes matter.
 
+
 ## Solution Overview
-LowTide Sentinel is an event-driven decision support system built to reduce noise and surface action.
+Wyvern is an event-driven decision support system built to reduce noise and surface action.
 
 - Maintains persistent incident state across cycles.
 - Detects deltas (new, escalated, resolved) instead of re-alerting unchanged data.
@@ -19,33 +21,33 @@ This project is an intelligence layer for dispatch support. It is not predictive
 
 ### Core Components
 - `data_collection/collector.py`
-	- Orchestrates ingestion jobs on intervals and writes canonical world state.
-	- Triggers risk scoring and trigger evaluation jobs.
+  - Orchestrates ingestion jobs on intervals and writes canonical world state.
+  - Triggers risk scoring and trigger evaluation jobs.
 - `data_collection/risk_engine.py`
-	- Normalizes incident severity.
-	- Tracks incident lifecycle state.
-	- Scores historical grid cells into composite risk zones.
-	- Writes `gemini_input.json` and compact `gemini_brief.json`.
+  - Normalizes incident severity.
+  - Tracks incident lifecycle state.
+  - Scores historical grid cells into composite risk zones.
+  - Writes `gemini_input.json` and compact `gemini_brief.json`.
 - `data_collection/gemini_trigger.py`
-	- Compares current state vs previous snapshot.
-	- Applies critical/high/moderate trigger tiers with cooldowns.
-	- Emits `gemini_trigger.json` with send-gating flags (`triggered`, `ready_to_send_gemini`, `consumed`).
+  - Compares current state vs previous snapshot.
+  - Applies critical/high/moderate trigger tiers with cooldowns.
+  - Emits `gemini_trigger.json` with send-gating flags (`triggered`, `ready_to_send_gemini`, `consumed`).
 - `prediction_server.py` (FastAPI)
-	- Serves predictions and routing/telemetry APIs.
-	- Runs collector one-shot, reads compact brief artifacts, and returns decision-ready prediction payloads.
-	- Supports OpenAI-compatible backends (Gemini by default, NVIDIA GPT OSS as toggle).
+  - Serves predictions and routing/telemetry APIs.
+  - Runs collector one-shot, reads compact brief artifacts, and returns decision-ready prediction payloads.
+  - Supports OpenAI-compatible backends (Gemini by default, NVIDIA GPT OSS as toggle).
 - `mapping-demo/` (React + Vite + TypeScript)
-	- Interactive operational map consuming backend prediction, route, and emergency telemetry endpoints.
+  - Interactive operational map consuming backend prediction, route, and emergency telemetry endpoints.
 
 ### End-to-End Flow
 ```text
 Live + Cached Data Sources
-				-> collector.py (state updates)
-				-> risk_engine.py (risk scoring + compact briefs)
-				-> gemini_trigger.py (tiered trigger decision)
-				-> Gemini call only when trigger gate allows
-				-> prediction_server.py (actionable API payloads)
-				-> mapping-demo (operator-facing map and threat panel)
+                -> collector.py (state updates)
+                -> risk_engine.py (risk scoring + compact briefs)
+                -> gemini_trigger.py (tiered trigger decision)
+                -> Gemini call only when trigger gate allows
+                -> prediction_server.py (actionable API payloads)
+                -> mapping-demo (operator-facing map and threat panel)
 ```
 
 ## Key Features

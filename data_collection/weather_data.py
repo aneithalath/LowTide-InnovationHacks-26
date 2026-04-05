@@ -75,7 +75,7 @@ def _parse_alert(nws_payload: dict[str, Any]) -> tuple[str | None, str | None]:
 def fetch_weather_snapshot() -> dict[str, Any]:
     load_dotenv(BASE_DIR.parent / ".env")
     openweather_key = os.getenv("OPENWEATHER_API_KEY")
-    nws_user_agent = os.getenv("NWS_USER_AGENT", "SENTINEL/1.0 unknown@example.com")
+    nws_user_agent = os.getenv("NWS_USER_AGENT", "WYVERN/1.0 unknown@example.com")
 
     try:
         alert_type = None

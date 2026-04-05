@@ -66,7 +66,7 @@ def _parse_iso(ts: str) -> datetime | None:
 def validate() -> int:
     state = ValidationState()
 
-    print("============ SENTINEL DATA VALIDATION ============")
+    print("============ WYVERN DATA VALIDATION ============")
 
     if not WORLD_STATE_PATH.exists():
         state.fail_line("world_state.json not found")

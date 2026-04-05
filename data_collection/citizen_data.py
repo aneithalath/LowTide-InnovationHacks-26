@@ -28,7 +28,7 @@ def fetch_citizen_incidents(min_lat, min_lon, max_lat, max_lon, limit=50):
         return []
 
 def normalize_incident(raw):
-    """Normalize a raw Citizen incident to SENTINEL schema."""
+    """Normalize a raw Citizen incident to WYVERN schema."""
     updates = raw.get("updates", {})
     latest_text = "No updates."
     if updates:

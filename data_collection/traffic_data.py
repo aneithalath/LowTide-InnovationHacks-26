@@ -17,7 +17,7 @@ from schemas import RoadSegment
 # AZ511 required headers
 pythonheaders = {
     "Accept": "application/json",
-    "User-Agent": "SENTINEL/1.0"
+    "User-Agent": "WYVERN/1.0"
 }
 
 BASE_DIR = Path(__file__).resolve().parent

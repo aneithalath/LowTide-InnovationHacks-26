@@ -234,7 +234,7 @@ def _configure_scheduler() -> Any:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="LowTide data collector")
+    parser = argparse.ArgumentParser(description="Wyvern data collector")
     parser.add_argument(
         "--once",
         action="store_true",

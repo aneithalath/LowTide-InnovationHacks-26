@@ -1,7 +1,9 @@
-# SENTINEL Data Collection Layer
+
+# WYVERN Data Collection Layer
 
 ## Purpose
-The data collection layer pulls live and semi-live public safety context for Tempe, AZ and normalizes it into a single world-state file consumed by downstream SENTINEL components (LLM decision support, map/heatmap views, and simulation views).
+
+The data collection layer pulls live and semi-live public safety context for Tempe, AZ and normalizes it into a single world-state file consumed by downstream WYVERN components (LLM decision support, map/heatmap views, and simulation views).
 
 This layer is designed so one broken source does not crash the system. Each module catches exceptions, logs one summary line, and falls back to last cached data or simulation when required.
 
