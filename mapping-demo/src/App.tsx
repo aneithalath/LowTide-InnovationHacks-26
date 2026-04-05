@@ -480,6 +480,7 @@ const CONGREGATION_CACHE_API = '/api/congregation-cache'
 const CONGREGATION_CACHE_FILE = '/congregation-cache.json'
 const CONGREGATION_CACHE_STORAGE_KEY = 'mapping-demo:congregation-cache:v1'
 const CCTV_SOURCE_FILE = '/cams.json'
+const CCTV_PIN_ICON = '\uD83D\uDCF9'
 const EMERGENCY_FLEET_SOURCE_FILE = '/emergency-fleet.json'
 const EMERGENCY_ROUTE_DISPATCH_API =
   import.meta.env.VITE_EMERGENCY_ROUTE_DISPATCH_API ?? 'http://127.0.0.1:8000/route/dispatch'
@@ -498,6 +499,8 @@ const CONGREGATION_CACHE_MAX_TILE_SCAN = 4_000
 const EMERGENCY_SIMULATION_UPDATE_MS = 1_000
 const EMERGENCY_TELEMETRY_PUSH_INTERVAL_MS = 1_000
 const EMERGENCY_PATROL_SPEED_MPH = 45
+const THREAT_NOTIFICATION_TOAST_VISIBLE_MS = 5_000
+const THREAT_NOTIFICATION_TOAST_SLIDE_OUT_MS = 340
 const KNOTS_PER_METER_PER_SECOND = 1.943844
 const FEET_PER_METER = 3.28084
 const METERS_PER_MILE = 1_609.344
@@ -560,13 +563,13 @@ const CHRISTIAN_DENOMINATION_HINTS = [
 ]
 
 const RELIGION_ICON_BY_GROUP: Record<ReligionGroup, string> = {
-  christian: '?',
-  muslim: '?',
-  jewish: '?',
-  buddhist: '?',
-  hindu: '?',
-  sikh: '?',
-  other: '?',
+  christian: '\u271D\uFE0F',
+  muslim: '\u262A\uFE0F',
+  jewish: '\u2721\uFE0F',
+  buddhist: '\u2638\uFE0F',
+  hindu: '\uD83D\uDD49',
+  sikh: '\u262C',
+  other: '\uD83D\uDED0',
 }
 
 const RELIGION_LABEL_BY_GROUP: Record<ReligionGroup, string> = {
@@ -606,11 +609,11 @@ const CONGREGATION_SUBLAYER_LABELS: Record<CongregationSubLayerKey, string> = {
 }
 
 const CONGREGATION_ICON_BY_CATEGORY: Record<CongregationSubLayerKey, string> = {
-  worship: '?',
-  school: '??',
-  stadium: '??',
-  arena: '??',
-  hospital: '??',
+  worship: '\uD83D\uDED0',
+  school: '\uD83C\uDFEB',
+  stadium: '\uD83C\uDFDF\uFE0F',
+  arena: '\uD83C\uDFC0',
+  hospital: '\uD83C\uDFE5',
 }
 
 const EMERGENCY_VEHICLE_LABEL_BY_TYPE: Record<EmergencyVehicleType, string> = {
@@ -1023,13 +1026,13 @@ const AIRCRAFT_CATEGORY_LABELS: Record<number, string> = {
 }
 
 const AIRCRAFT_ICON_BY_THEME: Record<AircraftPinTheme, string> = {
-  rotorcraft: '??',
-  heavy: '?',
-  light: '??',
-  glider: '??',
-  uav: '??',
-  surface: '??',
-  unknown: '?',
+  rotorcraft: '\u2708\uFE0F',
+  heavy: '\u2708\uFE0F',
+  light: '\u2708\uFE0F',
+  glider: '\u2708\uFE0F',
+  uav: '\u2708\uFE0F',
+  surface: '\u2708\uFE0F',
+  unknown: '\u2708\uFE0F',
 }
 
 const AIRCRAFT_PIN_THEMES: AircraftPinTheme[] = [
@@ -1477,7 +1480,7 @@ const hydrateAircraftUnitFromCacheEntry = (entry: unknown, index: number): Rotor
     positionSource: toFiniteInteger(source.positionSource),
     category,
     categoryLabel: resolveAircraftCategoryLabel(category),
-    icon: toTrimmedString(source.icon) || AIRCRAFT_ICON_BY_THEME[pinTheme],
+    icon: AIRCRAFT_ICON_BY_THEME[pinTheme],
     pinTheme,
     trueTrack: toFiniteNumber(source.trueTrack),
     speedKnots: resolvedSpeedKnots,
@@ -2933,7 +2936,9 @@ const resolveCongregationCategoryLabel = (category: string) => {
 }
 
 const resolveCongregationCategoryIcon = (category: string) =>
-  isCongregationSubLayerKey(category) ? CONGREGATION_ICON_BY_CATEGORY[category] : '??'
+  isCongregationSubLayerKey(category)
+    ? CONGREGATION_ICON_BY_CATEGORY[category]
+    : CONGREGATION_ICON_BY_CATEGORY.worship
 
 const resolveCongregationCategoryTheme = (category: string): CongregationPinTheme => {
   if (category === 'school' || category === 'stadium' || category === 'arena') {
@@ -3523,6 +3528,9 @@ function App() {
   const rotorcraftFetchControllerRef = useRef<AbortController | null>(null)
   const riskHeatmapFetchControllerRef = useRef<AbortController | null>(null)
   const threatActionItemsRef = useRef<ThreatActionItem[]>([])
+  const previousHighRiskThreatCountRef = useRef(0)
+  const threatPresenceToastHideTimerRef = useRef<number | null>(null)
+  const threatPresenceToastDismissTimerRef = useRef<number | null>(null)
   const congregationCacheInitPromiseRef = useRef<Promise<void> | null>(null)
   const aircraftCacheInitPromiseRef = useRef<Promise<void> | null>(null)
   const aircraftCacheSnapshotRef = useRef<AircraftCacheSnapshot | null>(null)
@@ -3552,6 +3560,8 @@ function App() {
   const [riskPredictions, setRiskPredictions] = useState<PredictionApiResponse[]>([])
   const [riskPredictionError, setRiskPredictionError] = useState('')
   const [riskPredictionNotice, setRiskPredictionNotice] = useState('')
+  const [isThreatPresenceToastVisible, setIsThreatPresenceToastVisible] = useState(false)
+  const [isThreatPresenceToastExiting, setIsThreatPresenceToastExiting] = useState(false)
   const [threatActionStatusById, setThreatActionStatusById] = useState<
     Record<string, ThreatActionStatus>
   >({})
@@ -3562,6 +3572,18 @@ function App() {
     {},
   )
   const [expandedControlVehicle, setExpandedControlVehicle] = useState<string | null>(null)
+
+  const clearThreatPresenceToastTimers = useCallback(() => {
+    if (threatPresenceToastHideTimerRef.current !== null) {
+      window.clearTimeout(threatPresenceToastHideTimerRef.current)
+      threatPresenceToastHideTimerRef.current = null
+    }
+
+    if (threatPresenceToastDismissTimerRef.current !== null) {
+      window.clearTimeout(threatPresenceToastDismissTimerRef.current)
+      threatPresenceToastDismissTimerRef.current = null
+    }
+  }, [])
 
   const refreshEmergencyVehiclesFromRuntime = () => {
     const updateTimestamp = Date.now()
@@ -3936,11 +3958,29 @@ function App() {
 
   const hasEnabledCongregationSubLayers = enabledCongregationSubLayers.size > 0
 
+  const congregationSubLayersForDataFetch = useMemo(
+    () =>
+      activeLayers.riskHeatmap
+        ? new Set<CongregationSubLayerKey>(CONGREGATION_SUBLAYER_KEYS)
+        : enabledCongregationSubLayers,
+    [activeLayers.riskHeatmap, enabledCongregationSubLayers],
+  )
+
+  const congregationPlacesForPins = useMemo(
+    () =>
+      congregationPlaces.filter(
+        (place) =>
+          isCongregationSubLayerKey(place.category) &&
+          enabledCongregationSubLayers.has(place.category),
+      ),
+    [congregationPlaces, enabledCongregationSubLayers],
+  )
+
   const congregationSummary = useMemo(() => {
     const trackedCategories = new Set<CongregationCategory>()
     const trackedReligions = new Set<string>()
 
-    for (const place of congregationPlaces) {
+    for (const place of congregationPlacesForPins) {
       trackedCategories.add(place.category)
 
       if (place.category === 'worship' && place.religionLabel) {
@@ -3949,11 +3989,11 @@ function App() {
     }
 
     return {
-      total: congregationPlaces.length,
+      total: congregationPlacesForPins.length,
       trackedCategories: trackedCategories.size,
       trackedReligions: trackedReligions.size,
     }
-  }, [congregationPlaces])
+  }, [congregationPlacesForPins])
 
   const aircraftSummary = useMemo(() => {
     const grounded = rotorcraft.filter((aircraft) => aircraft.onGround).length
@@ -4357,6 +4397,30 @@ function App() {
   }, [highRiskPredictions])
 
   useEffect(() => {
+    const currentHighRiskThreatCount = highRiskPredictions.length
+    const previousHighRiskThreatCount = previousHighRiskThreatCountRef.current
+
+    if (previousHighRiskThreatCount === 0 && currentHighRiskThreatCount > 0) {
+      clearThreatPresenceToastTimers()
+      setIsThreatPresenceToastVisible(true)
+      setIsThreatPresenceToastExiting(false)
+
+      threatPresenceToastHideTimerRef.current = window.setTimeout(() => {
+        setIsThreatPresenceToastExiting(true)
+        threatPresenceToastHideTimerRef.current = null
+      }, THREAT_NOTIFICATION_TOAST_VISIBLE_MS)
+
+      threatPresenceToastDismissTimerRef.current = window.setTimeout(() => {
+        setIsThreatPresenceToastVisible(false)
+        setIsThreatPresenceToastExiting(false)
+        threatPresenceToastDismissTimerRef.current = null
+      }, THREAT_NOTIFICATION_TOAST_VISIBLE_MS + THREAT_NOTIFICATION_TOAST_SLIDE_OUT_MS)
+    }
+
+    previousHighRiskThreatCountRef.current = currentHighRiskThreatCount
+  }, [highRiskPredictions.length, clearThreatPresenceToastTimers])
+
+  useEffect(() => {
     const syncUnitWidgetBounds = () => {
       setUnitWidgetPosition((currentPosition) =>
         clampUnitWidgetPosition(currentPosition.x, currentPosition.y),
@@ -4701,7 +4765,9 @@ function App() {
   }, [hasResolvedInitialCenter, initialCenter])
 
   useEffect(() => {
-    if (!viewportBounds || !activeLayers.incidentPins) {
+    const incidentDataEnabled = activeLayers.incidentPins || activeLayers.riskHeatmap
+
+    if (!viewportBounds || !incidentDataEnabled) {
       incidentFetchControllerRef.current?.abort()
       setIncidentLoading(false)
       setIncidentError('')
@@ -4782,13 +4848,13 @@ function App() {
     return () => {
       controller.abort()
     }
-  }, [viewportBounds, activeLayers.incidentPins])
+  }, [viewportBounds, activeLayers.incidentPins, activeLayers.riskHeatmap])
 
   useEffect(() => {
-    const congregationLayerEnabled =
-      activeLayers.congregationPins && hasEnabledCongregationSubLayers
+    const congregationDataEnabled =
+      activeLayers.riskHeatmap || (activeLayers.congregationPins && hasEnabledCongregationSubLayers)
 
-    if (!viewportBounds || !congregationLayerEnabled) {
+    if (!viewportBounds || !congregationDataEnabled || !congregationSubLayersForDataFetch.size) {
       congregationFetchControllerRef.current?.abort()
       setCongregationLoading(false)
       setCongregationError('')
@@ -4816,7 +4882,7 @@ function App() {
         const cachedPlacesInViewport = getCongregationPlacesInBounds(
           congregationCachedPlacesRef.current,
           viewportBounds,
-          enabledCongregationSubLayers,
+          congregationSubLayersForDataFetch,
         )
 
         if (cachedPlacesInViewport.length) {
@@ -4826,7 +4892,7 @@ function App() {
         let hasFullTileCoverage = viewportTileKeys !== null
 
         if (viewportTileKeys) {
-          for (const layerKey of enabledCongregationSubLayers) {
+          for (const layerKey of congregationSubLayersForDataFetch) {
             const layerCache = congregationCachedTilesByCategoryRef.current[layerKey]
 
             if (!layerCache || !Array.from(viewportTileKeys).every((tileKey) => layerCache.has(tileKey))) {
@@ -4846,7 +4912,7 @@ function App() {
           return
         }
 
-        const query = buildOverpassCongregationQuery(viewportBounds, enabledCongregationSubLayers)
+        const query = buildOverpassCongregationQuery(viewportBounds, congregationSubLayersForDataFetch)
 
         if (!query) {
           setCongregationPlaces(cachedPlacesInViewport)
@@ -4872,7 +4938,7 @@ function App() {
         }
 
         const payload = await response.text()
-        const parsedPlaces = parseOverpassCongregationPlaces(payload, enabledCongregationSubLayers)
+        const parsedPlaces = parseOverpassCongregationPlaces(payload, congregationSubLayersForDataFetch)
 
         if (!controller.signal.aborted) {
           congregationCachedPlacesRef.current = dedupeCongregationPlaces([
@@ -4881,7 +4947,7 @@ function App() {
           ])
 
           if (viewportTileKeys) {
-            for (const layerKey of enabledCongregationSubLayers) {
+            for (const layerKey of congregationSubLayersForDataFetch) {
               const layerCoverage = ensureCongregationCategoryCoverage(
                 congregationCachedTilesByCategoryRef.current,
                 layerKey,
@@ -4898,7 +4964,7 @@ function App() {
           const resolvedPlaces = getCongregationPlacesInBounds(
             congregationCachedPlacesRef.current,
             viewportBounds,
-            enabledCongregationSubLayers,
+            congregationSubLayersForDataFetch,
           )
 
           setCongregationPlaces(resolvedPlaces)
@@ -4912,7 +4978,7 @@ function App() {
           const fallbackPlaces = getCongregationPlacesInBounds(
             congregationCachedPlacesRef.current,
             viewportBounds,
-            enabledCongregationSubLayers,
+            congregationSubLayersForDataFetch,
           )
 
           setCongregationPlaces(fallbackPlaces)
@@ -4937,14 +5003,17 @@ function App() {
   }, [
     viewportBounds,
     activeLayers.congregationPins,
-    enabledCongregationSubLayers,
+    activeLayers.riskHeatmap,
+    congregationSubLayersForDataFetch,
     hasEnabledCongregationSubLayers,
     hydrateCongregationCache,
     persistCongregationCache,
   ])
 
   useEffect(() => {
-    if (!activeLayers.cctvPins) {
+    const cctvDataEnabled = activeLayers.cctvPins || activeLayers.riskHeatmap
+
+    if (!cctvDataEnabled) {
       cctvFetchControllerRef.current?.abort()
       setCctvLoading(false)
       setCctvError('')
@@ -4999,7 +5068,7 @@ function App() {
     return () => {
       controller.abort()
     }
-  }, [activeLayers.cctvPins])
+  }, [activeLayers.cctvPins, activeLayers.riskHeatmap])
 
   useEffect(() => {
     if (!hasResolvedInitialCenter) {
@@ -5742,7 +5811,7 @@ function App() {
       }
 
       if (current.kind === 'congregation') {
-        return congregationPlaces.some((place) => place.key === current.key) ? current : null
+        return congregationPlacesForPins.some((place) => place.key === current.key) ? current : null
       }
 
       if (current.kind === 'cctv') {
@@ -5759,7 +5828,14 @@ function App() {
 
       return current
     })
-  }, [incidents, highRiskPredictions, congregationPlaces, cctvCameras, emergencyVehicles, rotorcraft])
+  }, [
+    incidents,
+    highRiskPredictions,
+    congregationPlacesForPins,
+    cctvCameras,
+    emergencyVehicles,
+    rotorcraft,
+  ])
 
   useEffect(() => {
     cctvHlsRef.current?.destroy()
@@ -5882,7 +5958,7 @@ function App() {
       return
     }
 
-    const markers = congregationPlaces.map((place) => {
+    const markers = congregationPlacesForPins.map((place) => {
       const markerElement = document.createElement('button')
       markerElement.type = 'button'
       markerElement.className = `congregation-pin congregation-pin--${place.pinTheme}${
@@ -5937,7 +6013,7 @@ function App() {
       markers.forEach((marker) => marker.remove())
     }
   }, [
-    congregationPlaces,
+    congregationPlacesForPins,
     activeLayers.congregationPins,
     hasEnabledCongregationSubLayers,
     selectedCongregationKey,
@@ -5961,7 +6037,7 @@ function App() {
 
       const iconElement = document.createElement('span')
       iconElement.className = 'cctv-pin__icon'
-      iconElement.textContent = '??'
+      iconElement.textContent = CCTV_PIN_ICON
       markerElement.append(iconElement)
 
       markerElement.addEventListener('click', (event) => {
@@ -6168,8 +6244,9 @@ function App() {
       riskHeatmapFetchControllerRef.current?.abort()
       cctvHlsRef.current?.destroy()
       cctvHlsRef.current = null
+      clearThreatPresenceToastTimers()
     }
-  }, [])
+  }, [clearThreatPresenceToastTimers])
 
   const toggleLayer = (layer: keyof LayerState) => {
     setActiveLayers((current) => ({
@@ -6487,36 +6564,40 @@ function App() {
 
             <span className="legend-label">CCTV Layer</span>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">??</span>
+              <span className="legend-glyph">{CCTV_PIN_ICON}</span>
               Camera feed (YouTube, m3u8, or embed URL)
             </div>
 
             <span className="legend-label">Emergency Layer</span>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">??</span>
+              <span className="legend-glyph">{EMERGENCY_VEHICLE_ICON_BY_TYPE.police}</span>
               Police patrol car
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">??</span>
+              <span className="legend-glyph">{EMERGENCY_VEHICLE_ICON_BY_TYPE.ambulance}</span>
               Ambulance
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">??</span>
+              <span className="legend-glyph">{EMERGENCY_VEHICLE_ICON_BY_TYPE.firetruck}</span>
               Firetruck
             </div>
 
             <span className="legend-label">Congregation Icons</span>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">??</span>
+              <span className="legend-glyph">{CONGREGATION_ICON_BY_CATEGORY.school}</span>
               School
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">??</span>
+              <span className="legend-glyph">{CONGREGATION_ICON_BY_CATEGORY.stadium}</span>
               Stadium
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">??</span>
+              <span className="legend-glyph">{CONGREGATION_ICON_BY_CATEGORY.arena}</span>
               Arena
+            </div>
+            <div className="pin-legend__religion">
+              <span className="legend-glyph">{CONGREGATION_ICON_BY_CATEGORY.hospital}</span>
+              Hospital
             </div>
 
             <span className="legend-label">Traffic Overlay</span>
@@ -6537,53 +6618,53 @@ function App() {
 
             <span className="legend-label">Aviation Layer</span>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">??</span>
+              <span className="legend-glyph">{AIRCRAFT_ICON_BY_THEME.rotorcraft}</span>
               Rotorcraft
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">?</span>
+              <span className="legend-glyph">{AIRCRAFT_ICON_BY_THEME.heavy}</span>
               Heavy / Large / High-performance
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">??</span>
+              <span className="legend-glyph">{AIRCRAFT_ICON_BY_THEME.light}</span>
               Light / Small
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">??</span>
+              <span className="legend-glyph">{AIRCRAFT_ICON_BY_THEME.glider}</span>
               Glider / Lighter-than-air / Ultralight
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">??</span>
+              <span className="legend-glyph">{AIRCRAFT_ICON_BY_THEME.uav}</span>
               Unmanned aerial vehicle
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">??</span>
+              <span className="legend-glyph">{AIRCRAFT_ICON_BY_THEME.surface}</span>
               Surface categories / obstacles
             </div>
 
             <span className="legend-label">Worship Icons</span>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">?</span>
+              <span className="legend-glyph">{RELIGION_ICON_BY_GROUP.christian}</span>
               Christian
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">?</span>
+              <span className="legend-glyph">{RELIGION_ICON_BY_GROUP.muslim}</span>
               Muslim
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">?</span>
+              <span className="legend-glyph">{RELIGION_ICON_BY_GROUP.jewish}</span>
               Jewish
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">?</span>
+              <span className="legend-glyph">{RELIGION_ICON_BY_GROUP.buddhist}</span>
               Buddhist
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">?</span>
+              <span className="legend-glyph">{RELIGION_ICON_BY_GROUP.hindu}</span>
               Hindu
             </div>
             <div className="pin-legend__religion">
-              <span className="legend-glyph">☬</span>
+              <span className="legend-glyph">{RELIGION_ICON_BY_GROUP.sikh}</span>
               Sikh
             </div>
           </div>
@@ -6802,6 +6883,19 @@ function App() {
         <div ref={mapContainerRef} className="map-canvas" />
         {activeLayers.tacticalGrid ? <div className="tactical-grid-overlay" /> : null}
         {activeLayers.scanLines ? <div className="scanline-overlay" /> : null}
+
+        {isThreatPresenceToastVisible ? (
+          <aside
+            className={`threat-presence-toast${
+              isThreatPresenceToastExiting ? ' threat-presence-toast--exit' : ''
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            <strong>Threat detected</strong>
+            <p>A new threat is now present. Check the threat dashboard for more info.</p>
+          </aside>
+        ) : null}
 
         <div className="map-utility-controls">
           <button type="button" onClick={handleZoomIn} aria-label="Zoom in">

@@ -235,6 +235,8 @@
   align-items: center;
   justify-content: center;
   font-size: 0.9rem;
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  font-variant-emoji: emoji;
 }
 
 .legend-dot {
@@ -335,7 +337,49 @@
   gap: 6px;
 }
 
+.threat-presence-toast {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  z-index: 25;
+  width: min(360px, calc(100% - 32px));
+  border: 1px solid #7a2f2f;
+  background: rgba(34, 10, 10, 0.94);
+  color: #ffe8e8;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.52);
+  padding: 10px 12px;
+  display: grid;
+  gap: 4px;
+  pointer-events: none;
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform 340ms ease, opacity 340ms ease;
+}
+
+.threat-presence-toast strong {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-family: var(--font-mono);
+}
+
+.threat-presence-toast p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #ffd8d8;
+}
+
+.threat-presence-toast--exit {
+  transform: translateX(calc(100% + 18px));
+  opacity: 0;
+}
+
 .terminal-main--incident-panel-open .map-utility-controls {
+  right: calc(min(var(--incident-panel-width), 86vw) + 24px);
+}
+
+.terminal-main--incident-panel-open .threat-presence-toast {
   right: calc(min(var(--incident-panel-width), 86vw) + 24px);
 }
 
@@ -1213,6 +1257,8 @@
 .worship-pin__icon,
 .congregation-pin__icon {
   font-size: 0.86rem;
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  font-variant-emoji: emoji;
   line-height: 1;
   pointer-events: none;
 }
@@ -1295,6 +1341,8 @@
 
 .cctv-pin__icon {
   font-size: 0.82rem;
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  font-variant-emoji: emoji;
   line-height: 1;
   pointer-events: none;
 }
@@ -1416,6 +1464,8 @@
 
 .rotorcraft-pin__icon {
   font-size: 0.82rem;
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  font-variant-emoji: emoji;
   line-height: 1;
   pointer-events: none;
 }
@@ -1562,6 +1612,12 @@
     right: 12px;
   }
 
+  .threat-presence-toast {
+    top: 12px;
+    right: 12px;
+    width: min(340px, calc(100% - 24px));
+  }
+
   .threat-menu {
     left: 12px;
     bottom: 12px;
@@ -1609,6 +1665,12 @@
     right: 10px;
     width: auto;
     bottom: 10px;
+  }
+
+  .threat-presence-toast {
+    top: 10px;
+    right: 10px;
+    width: calc(100% - 20px);
   }
 
   .unit-widget__stats {
