@@ -30,9 +30,16 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
-# Load local environment variables (for example: NVIDIA_API_KEY).
+# Load local environment variables (for example: NVIDIA_API_KEY, GEMINI_API_KEY).
 PROJECT_ROOT = Path(__file__).resolve().parent
 load_dotenv(PROJECT_ROOT / '.env')
+
+# Manual LLM provider toggle:
+# - True  -> Gemini API
+# - False -> NVIDIA-hosted GPT OSS API
+USE_GEMINI_LLM = True
+GEMINI_MODEL_NAME = 'gemini-3.1-flash-lite'
+GPT_OSS_MODEL_NAME = 'openai/gpt-oss-00020b'
 
 
 @lru_cache(maxsize=1)
@@ -43,6 +50,17 @@ def _get_nvidia_client() -> OpenAI:
     return OpenAI(
         base_url='https://integrate.api.nvidia.com/v1',
         api_key=nvidia_api_key,
+    )
+
+
+@lru_cache(maxsize=1)
+def _get_gemini_client() -> OpenAI:
+    gemini_api_key = os.getenv('GEMINI_API_KEY', '').strip()
+    if not gemini_api_key:
+        raise RuntimeError('GEMINI_API_KEY is not set. Add it to .env before starting the server.')
+    return OpenAI(
+        base_url='https://generativelanguage.googleapis.com/v1beta/openai/',
+        api_key=gemini_api_key,
     )
 
 GRAPH_PATH = PROJECT_ROOT / 'data_collection' / 'data' / 'tempe_road_graph.graphml'
@@ -957,11 +975,11 @@ def _is_valid_prediction(parsed: dict) -> bool:
     return True
 
 
-def _call_gpt_oss_prediction(
+def _call_llm_prediction(
     incident: dict,
     live_vehicles: list[dict[str, object]],
 ) -> dict | None:
-    """Call NVIDIA Hosted GPT OSS 20B for one incident."""
+    """Call the selected OpenAI-compatible LLM backend for one incident."""
     reports_text = "\n".join(f"- {r}" for r in incident["reports"])
     location     = incident.get("location_name", "Unknown Location")
     source_api = str(incident.get('source_api', 'Unknown source'))
@@ -1052,9 +1070,13 @@ REQUIRED JSON — include every field exactly as shown:
 }}
 Return ONLY the JSON object:"""
 
+    provider_name = 'Gemini' if USE_GEMINI_LLM else 'NVIDIA GPT OSS'
+    model_name = GEMINI_MODEL_NAME if USE_GEMINI_LLM else GPT_OSS_MODEL_NAME
+
     try:
-        completion = _get_nvidia_client().chat.completions.create(
-            model='openai/gpt-oss-20b',
+        llm_client = _get_gemini_client() if USE_GEMINI_LLM else _get_nvidia_client()
+        completion = llm_client.chat.completions.create(
+            model=model_name,
             messages=[{'role': 'user', 'content': prompt}],
             temperature=1,
             top_p=1,
@@ -1072,7 +1094,7 @@ Return ONLY the JSON object:"""
             if delta is None:
                 continue
 
-            # NVIDIA streaming responses may include reasoning content separately.
+            # Some providers include reasoning content separately.
             _reasoning = getattr(delta, 'reasoning_content', None)
             content = getattr(delta, 'content', None)
             if content is not None:
@@ -1080,10 +1102,13 @@ Return ONLY the JSON object:"""
 
         raw = ''.join(content_chunks).strip()
         if not raw:
-            print(f"[ERROR] [{incident['id']}] NVIDIA API returned an empty response.", file=sys.stderr)
+            print(
+                f"[ERROR] [{incident['id']}] {provider_name} API returned an empty response.",
+                file=sys.stderr,
+            )
             return None
     except Exception as e:
-        print(f"[ERROR] [{incident['id']}] NVIDIA API call failed: {e}", file=sys.stderr)
+        print(f"[ERROR] [{incident['id']}] {provider_name} API call failed: {e}", file=sys.stderr)
         return None
 
     try:
@@ -1266,7 +1291,7 @@ def _update_live_predictions() -> list[dict]:
     results = []
     live_vehicles = _load_live_emergency_vehicles()
     for inc in INCIDENTS_SOURCE:
-        res = _call_gpt_oss_prediction(inc, live_vehicles)
+        res = _call_llm_prediction(inc, live_vehicles)
         if res:
             results.append(res)
     results.sort(key=lambda r: r["triage_meta"]["priority_score"], reverse=True)
@@ -1472,7 +1497,7 @@ def get_prediction() -> list[dict]:
 @app.post('/prediction/refresh')
 def force_refresh_prediction() -> dict:
     """
-    Manually trigger GPT OSS 20B to re-analyze all incidents.
+    Manually trigger the configured LLM backend to re-analyze all incidents.
     """
     results = _update_live_predictions()
     return {

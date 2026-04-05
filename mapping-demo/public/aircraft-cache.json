@@ -1,16 +1,69 @@
 {
-  "fetchedAt": 1774844812352,
+  "fetchedAt": 1775362378723,
   "bounds": {
-    "lowerLatitude": 33.26255041188364,
-    "lowerLongitude": -111.88734069030119,
-    "upperLatitude": 33.341174347899624,
-    "upperLongitude": -111.73554057757113
+    "lowerLatitude": 33.403942518659846,
+    "lowerLongitude": -111.98330168767922,
+    "upperLatitude": 33.46183965989424,
+    "upperLongitude": -111.90329618364356
   },
   "feedStats": {
-    "totalStates": 0,
-    "statesWithCategory": 0,
-    "statesWithCoordinates": 0,
-    "plottedStates": 0
+    "totalStates": 2,
+    "statesWithCategory": 2,
+    "statesWithCoordinates": 2,
+    "plottedStates": 2
   },
-  "aircraft": []
+  "aircraft": [
+    {
+      "key": "ab62ad-1775362375-0",
+      "icao24": "ab62ad",
+      "callsign": "SWA4569",
+      "callsignRaw": "SWA4569",
+      "originCountry": "United States",
+      "timePosition": 1775362374,
+      "latitude": 33.4406,
+      "longitude": -111.9042,
+      "baroAltitude": 754.38,
+      "velocityMetersPerSecond": 86.95,
+      "verticalRate": -4.23,
+      "sensors": [],
+      "geoAltitude": 762,
+      "squawk": "4103",
+      "spi": false,
+      "positionSource": 0,
+      "category": 0,
+      "pinTheme": "unknown",
+      "icon": "?",
+      "onGround": false,
+      "trueTrack": 270.68,
+      "speedKnots": 169.0172358,
+      "altitudeMeters": 762,
+      "lastContact": 1775362375
+    },
+    {
+      "key": "a9ab72-1775362375-1",
+      "icao24": "a9ab72",
+      "callsign": "SKW6237",
+      "callsignRaw": "SKW6237",
+      "originCountry": "United States",
+      "timePosition": 1775362374,
+      "latitude": 33.4286,
+      "longitude": -111.9374,
+      "baroAltitude": 662.94,
+      "velocityMetersPerSecond": 67.39,
+      "verticalRate": -3.9,
+      "sensors": [],
+      "geoAltitude": 647.7,
+      "squawk": "3373",
+      "spi": false,
+      "positionSource": 0,
+      "category": 0,
+      "pinTheme": "unknown",
+      "icon": "?",
+      "onGround": false,
+      "trueTrack": 270.44,
+      "speedKnots": 130.99564716,
+      "altitudeMeters": 647.7,
+      "lastContact": 1775362375
+    }
+  ]
 }
